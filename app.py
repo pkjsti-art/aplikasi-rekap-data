@@ -10,12 +10,12 @@ from openpyxl.utils import get_column_letter
 
 # Konfigurasi Halaman Web
 st.set_page_config(
-    page_title="Aplikasi Pengolahan Data Produksi Benang",
+    page_title="Aplikasi Pengelola Data PCP",
     page_icon="📊",
     layout="wide"
 )
 
-st.title("📊 Aplikasi Pengolahan & Rekap Data Produksi Benang Lengkap")
+st.title("📊 Aplikasi Pengelola Data PCP")
 st.write("Unggah file Excel sistem (export) dan file **Master Indikator**. Aplikasi ini akan memproses data dari awal hingga **Summary Rekap Per Minggu** secara otomatis.")
 
 # Sidebar untuk Pengaturan & Upload File
@@ -313,7 +313,7 @@ if uploaded_clean_file is not None and uploaded_master_file is not None:
                         ws.cell(row=r, column=c).fill = header_fill
 
                 current_row = 3
-                df_mach["Tanggal_Parsed"] = pd.to_datetime(df_mach["Tanggal"], errors='coerce')
+                df_mach["Tanggal_Parsed"] = pd.to_datetime(df_mach["Tanggal"], errors='coerce', dayfirst=True)
                 group_keys = df_mach.sort_values(["Tanggal_Parsed", "Pegawai", "Shift"])[["Tanggal", "Pegawai", "Shift"]].drop_duplicates().values
                 unique_dates = sorted(df_mach["Tanggal_Parsed"].dropna().unique())
                 date_to_color_idx = {dt: idx % len(color_list) for idx, dt in enumerate(unique_dates)}
@@ -379,7 +379,7 @@ if uploaded_clean_file is not None and uploaded_master_file is not None:
                         for col_idx in [1, 2, 3, 4, 5, 8, 9, 10, 11, 12]:
                             ws.merge_cells(start_row=start_group_row, start_column=col_idx, end_row=end_group_row, end_column=col_idx)
 
-                    dt_parsed = pd.to_datetime(dt, errors='coerce')
+                    dt_parsed = pd.to_datetime(dt, errors='coerce', dayfirst=True)
                     if dt_parsed in date_to_color_idx:
                         c_idx = date_to_color_idx[dt_parsed]
                         hex_color = color_list[c_idx]
@@ -416,7 +416,7 @@ if uploaded_clean_file is not None and uploaded_master_file is not None:
                 if pd.isna(dt):
                     return 1
                 try:
-                    dt_date = pd.to_datetime(dt).date()
+                    dt_date = pd.to_datetime(dt, dayfirst=True).date()
                     if dt_date in date_to_week_map:
                         return date_to_week_map[dt_date]
                     first_day_grid = month_weeks[0][0]
@@ -514,7 +514,7 @@ if uploaded_clean_file is not None and uploaded_master_file is not None:
                 df_group[tgl_col] = df_group[tgl_col].ffill()
                 df_group[mesin_col] = df_group[mesin_col].ffill()
 
-                df_group["Parsed_Date"] = pd.to_datetime(df_group[tgl_col], errors='coerce')
+                df_group["Parsed_Date"] = pd.to_datetime(df_group[tgl_col], errors='coerce', dayfirst=True)
                 df_group["Nama_Hari"] = df_group["Parsed_Date"].dt.weekday.map(days_map)
                 df_group["Minggu_Ke"] = df_group["Parsed_Date"].apply(get_calendar_week_mapping)
                 df_group["Mesin_Clean"] = df_group[mesin_col].astype(str).str.strip().str.upper()
