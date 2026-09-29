@@ -10,7 +10,7 @@ from openpyxl.utils import get_column_letter
 
 # Pengaturan Halaman Streamlit
 st.set_page_config(
-    page_title="Pengelolaan Data PCP | Futuristic Dashboard",
+    page_title="Pengelolaan Data PCP | Dashboard",
     page_icon="🚀",
     layout="wide"
 )
