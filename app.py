@@ -48,7 +48,6 @@ bulan_pilihan = st.sidebar.selectbox(
     index=8 # Default September
 )
 
-# MODIFIKASI: Mengubah slider menjadi kotak input angka (number_input)
 threshold_val = st.sidebar.number_input(
     "4. Nilai Batas Minimum (Threshold %)",
     min_value=0.0,
@@ -206,7 +205,6 @@ if proses_btn:
                 for _, row_data in df_clean.iterrows():
                     ws_c.append(list(row_data))
                 
-                # Auto-fit kolom data bersih
                 for col in ws_c.columns:
                     max_len = max(len(str(cell.value or '')) for cell in col)
                     col_letter = get_column_letter(col[0].column)
@@ -301,7 +299,7 @@ if proses_btn:
                         real_cones_list.append(round(real_cones))
                 df_clean['Qty Real Cones'] = real_cones_list
 
-                # --- BUAT REKAP KARYAWAN ---
+                # --- BUAT REKAP KARYAWAN (EXCEL) ---
                 wb_emp = Workbook()
                 wb_emp.remove(wb_emp.active)
                 employees = df_clean['Pegawai'].unique()
@@ -399,7 +397,6 @@ if proses_btn:
                             cell.border = thin_border
                             cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
-                    # MODIFIKASI: Lebar kolom menyesuaikan isinya (Auto-fit rapi)
                     min_widths = {1: 14, 2: 18, 3: 12, 4: 15, 5: 18, 6: 25, 7: 14}
                     for col_idx in range(1, 15):
                         col_letter = get_column_letter(col_idx)
@@ -418,7 +415,7 @@ if proses_btn:
                 wb_emp.save(output_emp_io)
                 output_emp_bytes = output_emp_io.getvalue()
 
-                # --- BUAT REKAP MESIN ---
+                # --- BUAT REKAP MESIN (EXCEL) ---
                 wb_mach = Workbook()
                 wb_mach.remove(wb_mach.active)
                 machines_raw = df_clean['Mesin'].unique()
@@ -548,7 +545,6 @@ if proses_btn:
                             cell.border = thin_border
                             cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
-                    # MODIFIKASI: Lebar kolom menyesuaikan isinya (Auto-fit rapi)
                     min_widths = {1: 14, 2: 18, 3: 12, 4: 15, 5: 18, 6: 25, 7: 14}
                     for col_idx in range(1, 15):
                         col_letter = get_column_letter(col_idx)
@@ -567,7 +563,6 @@ if proses_btn:
                 wb_mach.save(output_mach_io)
                 output_mach_bytes = output_mach_io.getvalue()
 
-                # Simpan sementara workbook mesin ke objek BytesIO untuk pembacaan Summary Minggu
                 output_mach_io.seek(0)
                 wb_src = load_workbook(output_mach_io, data_only=True)
                 sheet_names = wb_src.sheetnames
@@ -751,7 +746,6 @@ if proses_btn:
                         kg_candidates = [c for c in df_group.columns if str(c).strip().upper() == 'KG']
                         col_kg_name = kg_candidates[0] if kg_candidates else df_group.columns[-1]
 
-                    # Highlight baris di bawah threshold
                     current_check_row = 3
                     for sheet_idx, s_name in enumerate(s_list):
                         if sheet_idx > 0:
@@ -782,7 +776,6 @@ if proses_btn:
                             r_idx += (group_end_row_in_out - actual_row_in_out + 1)
                         current_check_row += ws_src_sheet.max_row
 
-                    # Tabel Rekap Mingguan per Mesin
                     for m_idx, mesin in enumerate(mesin_in_group):
                         df_mesin = df_group[df_group['Mesin_Clean'] == mesin]
                         minggu_list = sorted(df_mesin['Minggu_Ke'].unique())
@@ -868,7 +861,6 @@ if proses_btn:
                                     ws_out.cell(row=r, column=c_idx).border = thin_border
                             col_offset += 3
 
-                    # Tabel Rekap Persentase Semua Minggu
                     summary_start_col = start_right_col
                     summary_start_row = avg_row_idx + 4
                     ws_out.cell(row=summary_start_row, column=summary_start_col, value=f"REKAP PERSENTASE HASIL PER MINGGU & MESIN (BULAN {bulan_pilihan})").font = bold_font
@@ -970,9 +962,14 @@ if proses_btn:
                 st.session_state['summary_bytes'] = output_summary_bytes
                 st.session_state['df_clean_preview'] = df_clean
                 
-                # Membuat dataframe dummy/preview untuk rekap karyawan dan mesin (mengambil dari df_clean atau ringkasan)
-                st.session_state['df_emp_preview'] = df_clean[['Tanggal', 'Shift', 'NIP', 'Pegawai', 'Mesin', 'Benang', 'Qty Cones', 'Total', 'Qty Real Cones']].copy()
-                st.session_state['df_mach_preview'] = df_clean[['Tanggal', 'Shift', 'Mesin', 'Pegawai', 'Benang', 'Qty Cones', 'Total', 'Qty Real Cones']].copy()
+                # Menyiapkan DataFrame Rekap Karyawan & Mesin yang sesuai bentuk tabel rekapnya
+                df_rekap_karyawan = df_clean[['Tanggal', 'Pegawai', 'Mesin', 'Shift_Final', 'Benang', 'Qty Cones', 'Qty Real Cones', 'Total']].copy()
+                df_rekap_karyawan.columns = ['Tanggal', 'Nama Karyawan', 'Mesin', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
+                st.session_state['df_emp_preview'] = df_rekap_karyawan
+
+                df_rekap_mesin = df_clean[['Tanggal', 'Mesin', 'Pegawai', 'Shift_Final', 'Benang', 'Qty Cones', 'Qty Real Cones', 'Total']].copy()
+                df_rekap_mesin.columns = ['Tanggal', 'Mesin', 'Nama Karyawan', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
+                st.session_state['df_mach_preview'] = df_rekap_mesin
 
                 st.success("🎉 Data Berhasil Diproses Sepenuhnya!")
 
@@ -986,7 +983,6 @@ if st.session_state.get('processed', False):
     st.markdown("---")
     st.markdown("### 📊 Menu Hasil Pengolahan Data")
     
-    # MODIFIKASI: Menggunakan tab menu untuk 4 jenis data
     tab1, tab2, tab3, tab4 = st.tabs([
         "📁 Data Bersih", 
         "👥 Rekap per Karyawan", 
@@ -1012,8 +1008,19 @@ if st.session_state.get('processed', False):
             file_name="REKAP HASIL PER KARYAWAN.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        st.info("💡 Catatan: File Excel yang diunduh memiliki multi-sheet per karyawan dengan lebar kolom otomatis yang rapi.")
-        st.dataframe(st.session_state['df_emp_preview'], use_container_width=True)
+        st.info("💡 Pilih nama karyawan di bawah ini untuk melihat rekap data kerjanya secara spesifik:")
+        
+        # FITUR FILTER DROPDOWN KARYAWAN
+        df_emp_all = st.session_state['df_emp_preview']
+        daftar_karyawan = sorted(df_emp_all['Nama Karyawan'].dropna().unique().tolist())
+        pilihan_karyawan = st.selectbox("Pilih Nama Karyawan:", ["-- SEMUA KARYAWAN --"] + daftar_karyawan)
+
+        if pilihan_karyawan != "-- SEMUA KARYAWAN --":
+            df_emp_filtered = df_emp_all[df_emp_all['Nama Karyawan'] == pilihan_karyawan]
+        else:
+            df_emp_filtered = df_emp_all
+
+        st.dataframe(df_emp_filtered, use_container_width=True)
 
     with tab3:
         st.markdown("#### Tabel Rekap Hasil per Mesin")
@@ -1023,8 +1030,19 @@ if st.session_state.get('processed', False):
             file_name="REKAP HASIL PER MESIN.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        st.info("💡 Catatan: File Excel yang diunduh memiliki urutan sheet mesin (SSM 1A - 3B) dengan lebar kolom otomatis yang rapi.")
-        st.dataframe(st.session_state['df_mach_preview'], use_container_width=True)
+        st.info("💡 Pilih mesin di bawah ini untuk melihat rekap data kerja berdasarkan mesin secara spesifik:")
+        
+        # FITUR FILTER DROPDOWN MESIN
+        df_mach_all = st.session_state['df_mach_preview']
+        daftar_mesin = sorted(df_mach_all['Mesin'].dropna().unique().tolist())
+        pilihan_mesin = st.selectbox("Pilih Mesin:", ["-- SEMUA MESIN --"] + daftar_mesin)
+
+        if pilihan_mesin != "-- SEMUA MESIN --":
+            df_mach_filtered = df_mach_all[df_mach_all['Mesin'] == pilihan_mesin]
+        else:
+            df_mach_filtered = df_mach_all
+
+        st.dataframe(df_mach_filtered, use_container_width=True)
 
     with tab4:
         st.markdown("#### Summary Rekap per Minggu")
