@@ -48,13 +48,14 @@ bulan_pilihan = st.sidebar.selectbox(
     index=8 # Default September
 )
 
-threshold_val = st.sidebar.slider(
+# MODIFIKASI: Mengubah slider menjadi kotak input angka (number_input)
+threshold_val = st.sidebar.number_input(
     "4. Nilai Batas Minimum (Threshold %)",
     min_value=0.0,
     max_value=100.0,
     value=60.0,
     step=1.0,
-    help="Persentase minimum pencapaian sebelum dianggap rendah/perlu perhatian."
+    help="Masukkan angka batas minimum persentase (contoh: 60)"
 )
 
 st.sidebar.markdown("---")
@@ -204,6 +205,13 @@ if proses_btn:
                 ws_c.append(final_columns)
                 for _, row_data in df_clean.iterrows():
                     ws_c.append(list(row_data))
+                
+                # Auto-fit kolom data bersih
+                for col in ws_c.columns:
+                    max_len = max(len(str(cell.value or '')) for cell in col)
+                    col_letter = get_column_letter(col[0].column)
+                    ws_c.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
                 wb_clean.save(output_clean_io)
                 output_clean_bytes = output_clean_io.getvalue()
 
@@ -391,6 +399,21 @@ if proses_btn:
                             cell.border = thin_border
                             cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
+                    # MODIFIKASI: Lebar kolom menyesuaikan isinya (Auto-fit rapi)
+                    min_widths = {1: 14, 2: 18, 3: 12, 4: 15, 5: 18, 6: 25, 7: 14}
+                    for col_idx in range(1, 15):
+                        col_letter = get_column_letter(col_idx)
+                        max_len = 0
+                        for cell in ws[col_letter]:
+                            val_str = str(cell.value or '')
+                            for line in val_str.split('\n'):
+                                if len(line) > max_len:
+                                    max_len = len(line)
+                        calculated_width = max(max_len + 3, 12)
+                        if col_idx in min_widths:
+                            calculated_width = max(calculated_width, min_widths[col_idx])
+                        ws.column_dimensions[col_letter].width = calculated_width
+
                 output_emp_io = BytesIO()
                 wb_emp.save(output_emp_io)
                 output_emp_bytes = output_emp_io.getvalue()
@@ -524,6 +547,21 @@ if proses_btn:
                         for cell in row:
                             cell.border = thin_border
                             cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+
+                    # MODIFIKASI: Lebar kolom menyesuaikan isinya (Auto-fit rapi)
+                    min_widths = {1: 14, 2: 18, 3: 12, 4: 15, 5: 18, 6: 25, 7: 14}
+                    for col_idx in range(1, 15):
+                        col_letter = get_column_letter(col_idx)
+                        max_len = 0
+                        for cell in ws[col_letter]:
+                            val_str = str(cell.value or '')
+                            for line in val_str.split('\n'):
+                                if len(line) > max_len:
+                                    max_len = len(line)
+                        calculated_width = max(max_len + 3, 12)
+                        if col_idx in min_widths:
+                            calculated_width = max(calculated_width, min_widths[col_idx])
+                        ws.column_dimensions[col_letter].width = calculated_width
 
                 output_mach_io = BytesIO()
                 wb_mach.save(output_mach_io)
@@ -924,7 +962,7 @@ if proses_btn:
                 wb_out.save(output_summary_io)
                 output_summary_bytes = output_summary_io.getvalue()
 
-                # Simpan hasil ke session_state agar tidak hilang saat tombol unduh diklik
+                # Simpan hasil ke session_state
                 st.session_state['processed'] = True
                 st.session_state['clean_bytes'] = output_clean_bytes
                 st.session_state['emp_bytes'] = output_emp_bytes
@@ -932,55 +970,70 @@ if proses_btn:
                 st.session_state['summary_bytes'] = output_summary_bytes
                 st.session_state['df_clean_preview'] = df_clean
                 
+                # Membuat dataframe dummy/preview untuk rekap karyawan dan mesin (mengambil dari df_clean atau ringkasan)
+                st.session_state['df_emp_preview'] = df_clean[['Tanggal', 'Shift', 'NIP', 'Pegawai', 'Mesin', 'Benang', 'Qty Cones', 'Total', 'Qty Real Cones']].copy()
+                st.session_state['df_mach_preview'] = df_clean[['Tanggal', 'Shift', 'Mesin', 'Pegawai', 'Benang', 'Qty Cones', 'Total', 'Qty Real Cones']].copy()
+
                 st.success("🎉 Data Berhasil Diproses Sepenuhnya!")
 
             except Exception as e:
                 st.error(f"❌ Terjadi kesalahan saat memproses data: {e}")
 
 # ==========================================
-# TAMPILAN DASHBOARD & FITUR UNDUH
+# TAMPILAN DASHBOARD & MENU TAB TERPISAH
 # ==========================================
 if st.session_state.get('processed', False):
     st.markdown("---")
-    st.markdown("### 📥 Hasil Berkas yang Siap Diunduh")
-    st.info("Anda dapat mengunduh masing-masing hasil pengolahan di bawah ini dengan sekali klik:")
+    st.markdown("### 📊 Menu Hasil Pengolahan Data")
+    
+    # MODIFIKASI: Menggunakan tab menu untuk 4 jenis data
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📁 Data Bersih", 
+        "👥 Rekap per Karyawan", 
+        "⚙️ Rekap per Mesin", 
+        "📅 Summary per Minggu"
+    ])
 
-    col1, col2 = st.columns(2)
-    with col1:
+    with tab1:
+        st.markdown("#### Tabel Data Bersih")
         st.download_button(
-            label="📥 Unduh Data Bersih (.xlsx)",
+            label="📥 Unduh File Data Bersih (.xlsx)",
             data=st.session_state['clean_bytes'],
             file_name="DATA BERSIH.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+        st.dataframe(st.session_state['df_clean_preview'], use_container_width=True)
+
+    with tab2:
+        st.markdown("#### Tabel Rekap Hasil per Karyawan")
         st.download_button(
-            label="📥 Unduh Rekap Hasil per Karyawan (.xlsx)",
+            label="📥 Unduh File Rekap Hasil per Karyawan (.xlsx)",
             data=st.session_state['emp_bytes'],
             file_name="REKAP HASIL PER KARYAWAN.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+        st.info("💡 Catatan: File Excel yang diunduh memiliki multi-sheet per karyawan dengan lebar kolom otomatis yang rapi.")
+        st.dataframe(st.session_state['df_emp_preview'], use_container_width=True)
 
-    with col2:
+    with tab3:
+        st.markdown("#### Tabel Rekap Hasil per Mesin")
         st.download_button(
-            label="📥 Unduh Rekap Hasil per Mesin (.xlsx)",
+            label="📥 Unduh File Rekap Hasil per Mesin (.xlsx)",
             data=st.session_state['mach_bytes'],
             file_name="REKAP HASIL PER MESIN.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+        st.info("💡 Catatan: File Excel yang diunduh memiliki urutan sheet mesin (SSM 1A - 3B) dengan lebar kolom otomatis yang rapi.")
+        st.dataframe(st.session_state['df_mach_preview'], use_container_width=True)
+
+    with tab4:
+        st.markdown("#### Summary Rekap per Minggu")
         st.download_button(
-            label="📥 Unduh Summary Rekap per Minggu (.xlsx)",
+            label="📥 Unduh File Summary Rekap per Minggu (.xlsx)",
             data=st.session_state['summary_bytes'],
             file_name="SUMMARY REKAP PER MINGGU.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
-    st.markdown("---")
-    st.markdown("### 👀 Pratinjau Tabel Data Bersih di Dashboard")
-    st.markdown("Berikut adalah cuplikan data bersih yang telah berhasil disaring dan dirapikan:")
-    st.dataframe(st.session_state['df_clean_preview'].head(50), use_container_width=True)
+        st.warning("⚠️ Struktur tabel Summary Mingguan sangat kompleks dan digabung per grup mesin, sehingga diunduh langsung dalam bentuk file Excel lengkap siap pakai.")
 else:
-    st.info("👈 Silakan unggah file Anda melalui panel di sebelah kiri, lalu klik tombol **'Proses Data Sekarang'** untuk memulai.")
+    st.info("👈 Silakan unggah file Anda melalui panel di sebelah kiri, masukkan nilai batas minimum, lalu klik tombol **'Proses Data Sekarang'** untuk memulai.")
