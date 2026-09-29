@@ -64,11 +64,11 @@ uploaded_master = st.sidebar.file_uploader(
 
 # Inisialisasi Session State agar halaman tidak reset saat tombol download diklik
 if "processed" not in st.session_state:
-    st.session_state.processed = False
+  st.session_state.processed = False
 if "output_rekap_bytes" not in st.session_state:
-    st.session_state.output_rekap_bytes = None
+  st.session_state.output_rekap_bytes = None
 if "output_summary_bytes" not in st.session_state:
-    st.session_state.output_summary_bytes = None
+  st.session_state.output_summary_bytes = None
 
 if st.sidebar.button("Proses Data", type="primary"):
   if uploaded_clean is not None and uploaded_master is not None:
@@ -167,7 +167,7 @@ if st.sidebar.button("Proses Data", type="primary"):
             determine_shift_final, axis=1
         )
 
-        # Perhitungan Qty Real Cones
+        # Perhitungan Qty Real Cones dengan pengaman .empty
         group_max_qty = (
             df_clean.groupby(["Tanggal", "Pegawai"])["Qty Cones"]
             .max()
@@ -192,10 +192,15 @@ if st.sidebar.button("Proses Data", type="primary"):
                 (df_clean["Tanggal"] == row["Tanggal"])
                 & (df_clean["Pegawai"] == row["Pegawai"])
             ]
-            row_max = group_rows[group_rows["Qty Cones"] == max_q].iloc[0]
-            waktu_max_qty_item = get_master_data(
-                row_max["Benang"], row_max["Mesin"], "WAKTU (MENIT)"
-            )
+            sub_max = group_rows[group_rows["Qty Cones"] == max_q]
+            if not sub_max.empty:
+              row_max = sub_max.iloc[0]
+              waktu_max_qty_item = get_master_data(
+                  row_max["Benang"], row_max["Mesin"], "WAKTU (MENIT)"
+              )
+            else:
+              waktu_max_qty_item = 0
+
             if waktu_max_qty_item > 0:
               real_cones = (q_val * waktu_current) / waktu_max_qty_item
             else:
