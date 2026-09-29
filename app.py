@@ -10,55 +10,130 @@ from openpyxl.utils import get_column_letter
 
 # Pengaturan Halaman Streamlit
 st.set_page_config(
-    page_title="Pengelolaan Data PCP",
-    page_icon="📊",
+    page_title="Pengelolaan Data PCP | Futuristic Dashboard",
+    page_icon="🚀",
     layout="wide"
 )
 
-# Judul Utama Dashboard
-st.markdown("<h1 style='text-align: center; color: #1f77b4;'>Pengelolaan Data PCP</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: gray;'>Aplikasi web praktis untuk mengolah data ekspor sistem, membuat rekap karyawan, rekap mesin, dan ringkasan mingguan secara otomatis.</p>", unsafe_allow_html=True)
-st.markdown("---")
+# ==========================================
+# STYLING KUSTOM: TEMA FUTURISTIK / MODERN
+# ==========================================
+st.markdown("""
+<style>
+    /* Mengubah latar belakang utama agar senada dengan tema gelap modern */
+    .stApp {
+        background-color: #0d1117;
+        color: #c9d1d9;
+    }
+    
+    /* Styling Header Utama */
+    h1 {
+        font-family: 'Inter', sans-serif;
+        font-weight: 800;
+        background: linear-gradient(90deg, #58a6ff, #bc8cff, #3fb950);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        margin-bottom: 0px;
+    }
+    
+    /* Styling Kartu / Kontainer */
+    .metric-card {
+        background: rgba(22, 27, 34, 0.7);
+        border: 1px solid #30363d;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(10px);
+        text-align: center;
+    }
+
+    /* Styling Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #161b22;
+        border-right: 1px solid #30363d;
+    }
+
+    /* Efek Tombol Futuristik */
+    .stButton>button {
+        background: linear-gradient(135deg, #1f6feb 0%, #238636 100%);
+        color: white;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 15px rgba(31, 111, 235, 0.4);
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 25px rgba(35, 134, 54, 0.8);
+    }
+
+    /* Styling Tab Menu */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #161b22;
+        padding: 6px;
+        border-radius: 10px;
+        border: 1px solid #30363d;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: transparent;
+        border-radius: 6px;
+        color: #8b949e;
+        font-weight: 600;
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #1f6feb, #388bfd) !important;
+        color: white !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Judul & Deskripsi Futuristik
+st.markdown("<h1>PENGELOLAAN DATA PCP</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #8b949e; font-size: 16px;'>Sistem Otomasi Pintar & Rekapitulasi Data Produksi Berbasis Web</p>", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
 # SIDEBAR: PENGATURAN & UNGGAH BERKAS
 # ==========================================
-st.sidebar.header("📁 Unggah Berkas & Pengaturan")
-st.sidebar.markdown("Silakan lengkapi data di bawah ini:")
+st.sidebar.markdown("### 🎛️ Panel Kontrol Utama")
+st.sidebar.markdown("---")
 
 uploaded_master = st.sidebar.file_uploader(
-    "1. Unggah File Master (Ekspor Sistem .xlsx)", 
+    "📁 1. Master Ekspor Sistem (.xlsx)", 
     type=["xlsx"],
-    help="Unggah file laporan utama yang diexport langsung dari sistem."
+    help="Unggah file laporan utama dari sistem."
 )
 
 uploaded_indicator = st.sidebar.file_uploader(
-    "2. Unggah File Master Indikator (.xlsx)", 
+    "📁 2. Master Indikator (.xlsx)", 
     type=["xlsx"],
     help="Unggah file acuan target, waktu, dan spindle."
 )
 
 st.sidebar.markdown("---")
-st.sidebar.header("⚙️ Pengaturan Pengolahan")
+st.sidebar.markdown("### ⚙️ Parameter Pengolahan")
 
 bulan_pilihan = st.sidebar.selectbox(
-    "3. Pilih Bulan Laporan",
+    "🗓️ Pilih Bulan Laporan",
     ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", 
      "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"],
-    index=8 # Default September
+    index=8
 )
 
 threshold_val = st.sidebar.number_input(
-    "4. Nilai Batas Minimum (Threshold %)",
+    "🎯 Nilai Batas Minimum (%)",
     min_value=0.0,
     max_value=100.0,
     value=60.0,
     step=1.0,
-    help="Masukkan angka batas minimum persentase (contoh: 60)"
+    help="Batas minimum persentase pencapaian"
 )
 
 st.sidebar.markdown("---")
-proses_btn = st.sidebar.button("🚀 Proses Data Sekarang", type="primary", use_container_width=True)
+proses_btn = st.sidebar.button("⚡ EKSEKUSI PROSES DATA", use_container_width=True)
 
 # Fungsi Normalisasi Teks
 def clean_str(val):
@@ -69,9 +144,9 @@ def clean_str(val):
 # Fungsi Utama Pemrosesan Data
 if proses_btn:
     if not uploaded_master or not uploaded_indicator:
-        st.error("⚠️ Mohon unggah kedua file (File Master dan File Master Indikator) terlebih dahulu di menu sebelah kiri!")
+        st.error("⚠️ Peringatan: Mohon unggah kedua file master terlebih dahulu melalui panel kontrol di sebelah kiri!")
     else:
-        with st.spinner("⏳ Sedang memproses data, mohon tunggu sebentar..."):
+        with st.spinner("🚀 Sistem sedang memproses algoritma data, harap tunggu..."):
             try:
                 # ==========================================
                 # TAHAP 1: PEMBUATAN DATA MASTER BERSIH
@@ -962,7 +1037,6 @@ if proses_btn:
                 st.session_state['summary_bytes'] = output_summary_bytes
                 st.session_state['df_clean_preview'] = df_clean
                 
-                # Menyiapkan DataFrame Rekap Karyawan & Mesin yang sesuai bentuk tabel rekapnya
                 df_rekap_karyawan = df_clean[['Tanggal', 'Pegawai', 'Mesin', 'Shift_Final', 'Benang', 'Qty Cones', 'Qty Real Cones', 'Total']].copy()
                 df_rekap_karyawan.columns = ['Tanggal', 'Nama Karyawan', 'Mesin', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
                 st.session_state['df_emp_preview'] = df_rekap_karyawan
@@ -971,17 +1045,43 @@ if proses_btn:
                 df_rekap_mesin.columns = ['Tanggal', 'Mesin', 'Nama Karyawan', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
                 st.session_state['df_mach_preview'] = df_rekap_mesin
 
-                st.success("🎉 Data Berhasil Diproses Sepenuhnya!")
+                st.success("⚡ Pemrosesan Data Sukses! Sistem Siap Digunakan.")
 
             except Exception as e:
-                st.error(f"❌ Terjadi kesalahan saat memproses data: {e}")
+                st.error(f"❌ Error Sistem: {e}")
 
 # ==========================================
-# TAMPILAN DASHBOARD & MENU TAB TERPISAH
+# TAMPILAN DASHBOARD UTAMA & KARTU METRIK
 # ==========================================
 if st.session_state.get('processed', False):
     st.markdown("---")
-    st.markdown("### 📊 Menu Hasil Pengolahan Data")
+    
+    # Kartu Metrik Ringkasan Futuristik (Glassmorphism)
+    col_m1, col_m2, col_m3 = st.columns(3)
+    with col_m1:
+        st.markdown(f"""
+            <div class="metric-card">
+                <p style='color: #8b949e; margin-bottom: 0;'>STATUS BULAN</p>
+                <h3 style='color: #58a6ff; margin-top: 5px;'>{bulan_pilihan}</h3>
+            </div>
+        """, unsafe_allow_html=True)
+    with col_m2:
+        st.markdown(f"""
+            <div class="metric-card">
+                <p style='color: #8b949e; margin-bottom: 0;'>THRESHOLD MINIMUM</p>
+                <h3 style='color: #3fb950; margin-top: 5px;'>{threshold_val}%</h3>
+            </div>
+        """, unsafe_allow_html=True)
+    with col_m3:
+        st.markdown(f"""
+            <div class="metric-card">
+                <p style='color: #8b949e; margin-bottom: 0;'>TOTAL TRANSAKSI BERSIH</p>
+                <h3 style='color: #bc8cff; margin-top: 5px;'>{len(st.session_state['df_clean_preview'])} Baris</h3>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### 📊 Menu Navigasi Data & Unduhan")
     
     tab1, tab2, tab3, tab4 = st.tabs([
         "📁 Data Bersih", 
@@ -991,9 +1091,9 @@ if st.session_state.get('processed', False):
     ])
 
     with tab1:
-        st.markdown("#### Tabel Data Bersih")
+        st.markdown("#### Tabel Data Bersih Sistem")
         st.download_button(
-            label="📥 Unduh File Data Bersih (.xlsx)",
+            label="📥 Unduh Berkas Data Bersih (.xlsx)",
             data=st.session_state['clean_bytes'],
             file_name="DATA BERSIH.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -1003,14 +1103,13 @@ if st.session_state.get('processed', False):
     with tab2:
         st.markdown("#### Tabel Rekap Hasil per Karyawan")
         st.download_button(
-            label="📥 Unduh File Rekap Hasil per Karyawan (.xlsx)",
+            label="📥 Unduh Berkas Rekap Karyawan (.xlsx)",
             data=st.session_state['emp_bytes'],
             file_name="REKAP HASIL PER KARYAWAN.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        st.info("💡 Pilih nama karyawan di bawah ini untuk melihat rekap data kerjanya secara spesifik:")
+        st.info("💡 Saring data berdasarkan nama karyawan untuk analisis performa individu:")
         
-        # FITUR FILTER DROPDOWN KARYAWAN
         df_emp_all = st.session_state['df_emp_preview']
         daftar_karyawan = sorted(df_emp_all['Nama Karyawan'].dropna().unique().tolist())
         pilihan_karyawan = st.selectbox("Pilih Nama Karyawan:", ["-- SEMUA KARYAWAN --"] + daftar_karyawan)
@@ -1025,17 +1124,16 @@ if st.session_state.get('processed', False):
     with tab3:
         st.markdown("#### Tabel Rekap Hasil per Mesin")
         st.download_button(
-            label="📥 Unduh File Rekap Hasil per Mesin (.xlsx)",
+            label="📥 Unduh Berkas Rekap Mesin (.xlsx)",
             data=st.session_state['mach_bytes'],
             file_name="REKAP HASIL PER MESIN.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        st.info("💡 Pilih mesin di bawah ini untuk melihat rekap data kerja berdasarkan mesin secara spesifik:")
+        st.info("💡 Saring data berdasarkan mesin produksi untuk memantau performa unit mesin:")
         
-        # FITUR FILTER DROPDOWN MESIN
         df_mach_all = st.session_state['df_mach_preview']
         daftar_mesin = sorted(df_mach_all['Mesin'].dropna().unique().tolist())
-        pilihan_mesin = st.selectbox("Pilih Mesin:", ["-- SEMUA MESIN --"] + daftar_mesin)
+        pilihan_mesin = st.selectbox("Pilih Mesin Produksi:", ["-- SEMUA MESIN --"] + daftar_mesin)
 
         if pilihan_mesin != "-- SEMUA MESIN --":
             df_mach_filtered = df_mach_all[df_mach_all['Mesin'] == pilihan_mesin]
@@ -1047,11 +1145,16 @@ if st.session_state.get('processed', False):
     with tab4:
         st.markdown("#### Summary Rekap per Minggu")
         st.download_button(
-            label="📥 Unduh File Summary Rekap per Minggu (.xlsx)",
+            label="📥 Unduh Berkas Summary Mingguan (.xlsx)",
             data=st.session_state['summary_bytes'],
             file_name="SUMMARY REKAP PER MINGGU.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        st.warning("⚠️ Struktur tabel Summary Mingguan sangat kompleks dan digabung per grup mesin, sehingga diunduh langsung dalam bentuk file Excel lengkap siap pakai.")
+        st.warning("⚠️ Struktur tabel Summary Mingguan dirancang secara kompleks per grup mesin. Silakan unduh langsung file Excel untuk melihat format laporan utuh.")
 else:
-    st.info("👈 Silakan unggah file Anda melalui panel di sebelah kiri, masukkan nilai batas minimum, lalu klik tombol **'Proses Data Sekarang'** untuk memulai.")
+    st.markdown("""
+        <div style="text-align: center; padding: 40px; background: rgba(22, 27, 34, 0.4); border-radius: 12px; border: 1px dashed #30363d;">
+            <h3>🌐 Sistem Menunggu Masukan Berkas</h3>
+            <p style="color: #8b949e;">Silakan unggah berkas laporan dan tentukan parameter di panel kontrol sebelah kiri, lalu klik tombol <b>EKSEKUSI PROSES DATA</b>.</p>
+        </div>
+    """, unsafe_allow_html=True)
