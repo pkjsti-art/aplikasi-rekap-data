@@ -62,7 +62,7 @@ uploaded_master = st.sidebar.file_uploader(
     "Upload File Master Indikator (.xlsx)", type=["xlsx"]
 )
 
-# Inisialisasi Session State agar halaman tidak reset saat tombol download diklik
+# Inisialisasi Session State
 if "processed" not in st.session_state:
   st.session_state.processed = False
 if "output_rekap_bytes" not in st.session_state:
@@ -167,7 +167,7 @@ if st.sidebar.button("Proses Data", type="primary"):
             determine_shift_final, axis=1
         )
 
-        # Perhitungan Qty Real Cones dengan pengaman .empty
+        # Perhitungan Qty Real Cones dengan pengaman NaN
         group_max_qty = (
             df_clean.groupby(["Tanggal", "Pegawai"])["Qty Cones"]
             .max()
@@ -182,6 +182,9 @@ if st.sidebar.button("Proses Data", type="primary"):
         for idx, row in df_clean.iterrows():
           q_val = row["Qty Cones"]
           max_q = row["max_qty"]
+          if pd.isna(q_val):
+            real_cones_list.append(0)
+            continue
           if q_val == max_q:
             real_cones_list.append(round(q_val))
           else:
@@ -299,11 +302,14 @@ if st.sidebar.button("Proses Data", type="primary"):
             if df_group.empty:
               continue
             start_group_row = current_row
+
+            sum_rc = df_group["Qty Real Cones"].sum()
             total_real_cones = (
-                int(df_group["Qty Real Cones"].sum())
-                if df_group["Qty Real Cones"].sum().is_integer()
-                else df_group["Qty Real Cones"].sum()
+                int(sum_rc)
+                if pd.notna(sum_rc) and float(sum_rc).is_integer()
+                else (sum_rc if pd.notna(sum_rc) else 0)
             )
+
             shift_status = df_group["Status_Shift"].iloc[0]
             max_row_in_group = df_group.loc[df_group["Qty Cones"].idxmax()]
             ref_benang = max_row_in_group["Benang"]
@@ -312,7 +318,7 @@ if st.sidebar.button("Proses Data", type="primary"):
             spindle_val = get_master_data(
                 ref_benang, ref_mesin, spindle_col_name
             )
-            if spindle_val.is_integer():
+            if pd.notna(spindle_val) and float(spindle_val).is_integer():
               spindle_val = int(spindle_val)
 
             col_t90 = (
@@ -326,21 +332,23 @@ if st.sidebar.button("Proses Data", type="primary"):
                 else "TARGET 100% SHIFT PANJANG"
             )
             target_90 = get_master_data(ref_benang, ref_mesin, col_t90)
-            if target_90.is_integer():
+            if pd.notna(target_90) and float(target_90).is_integer():
               target_90 = int(target_90)
             target_100 = get_master_data(ref_benang, ref_mesin, col_t100)
-            if target_100.is_integer():
+            if pd.notna(target_100) and float(target_100).is_integer():
               target_100 = int(target_100)
 
             for idx, row in df_group.iterrows():
               benang = row["Benang"]
               mesin = row["Mesin"]
               qty_cones_val = row["Qty Cones"]
-              if qty_cones_val.is_integer():
+              if pd.notna(qty_cones_val) and float(qty_cones_val).is_integer():
                 qty_cones_val = int(qty_cones_val)
-              kg_val = row["Total"] if "Total" in row else 0.0
+              kg_val = (
+                  row["Total"] if "Total" in row and pd.notna(row["Total"]) else 0.0
+              )
               q_real_val = row["Qty Real Cones"]
-              if q_real_val.is_integer():
+              if pd.notna(q_real_val) and float(q_real_val).is_integer():
                 q_real_val = int(q_real_val)
 
               ws.cell(row=current_row, column=1, value=str(row["Tanggal"])[:10])
@@ -354,11 +362,15 @@ if st.sidebar.button("Proses Data", type="primary"):
               ws.cell(row=current_row, column=6, value=benang)
               cell_qreal = ws.cell(row=current_row, column=7, value=q_real_val)
               cell_qreal.number_format = "#,##0"
-              cell_tot = ws.cell(row=current_row, column=8, value=total_real_cones)
+              cell_tot = ws.cell(
+                  row=current_row, column=8, value=total_real_cones
+              )
               cell_tot.number_format = "#,##0"
               cell_t90 = ws.cell(row=current_row, column=9, value=target_90)
               cell_t90.number_format = (
-                  "#,##0" if isinstance(target_90, int) else "#,##0.00"
+                  "#,##0"
+                  if isinstance(target_90, (int, np.integer))
+                  else "#,##0.00"
               )
               p90 = (
                   (total_real_cones / target_90) if target_90 > 0 else 0.0
@@ -367,7 +379,9 @@ if st.sidebar.button("Proses Data", type="primary"):
               cell_p90.number_format = "0.0%"
               cell_t100 = ws.cell(row=current_row, column=11, value=target_100)
               cell_t100.number_format = (
-                  "#,##0" if isinstance(target_100, int) else "#,##0.00"
+                  "#,##0"
+                  if isinstance(target_100, (int, np.integer))
+                  else "#,##0.00"
               )
               p100 = (
                   (total_real_cones / target_100) if target_100 > 0 else 0.0
@@ -428,7 +442,6 @@ if st.sidebar.button("Proses Data", type="primary"):
               )
             ws.column_dimensions[col_letter].width = calculated_width
 
-        # Simpan rekap per mesin ke bytes buffer
         rekap_io = io.BytesIO()
         wb.save(rekap_io)
         rekap_io.seek(0)
@@ -676,7 +689,6 @@ if st.sidebar.button("Proses Data", type="primary"):
                 kg_candidates[0] if kg_candidates else df_group.columns[-1]
             )
 
-          # Highlight Baris
           current_check_row = 3
           for sheet_idx, s_name in enumerate(s_list):
             if sheet_idx > 0:
@@ -709,7 +721,6 @@ if st.sidebar.button("Proses Data", type="primary"):
               r_idx += group_end_row_in_out - actual_row_in_out + 1
             current_check_row += ws_src_sheet.max_row
 
-          # 1. Tabel Rekap Mingguan per Mesin
           last_rekap_end_col = start_right_col
           for m_idx, mesin in enumerate(mesin_in_group):
             df_mesin = df_group[df_group["Mesin_Clean"] == mesin]
@@ -920,7 +931,6 @@ if st.sidebar.button("Proses Data", type="primary"):
               col_offset += 3
               last_rekap_end_col = col_offset
 
-          # 2. Tabel Rekap Persentase Semua Minggu
           summary_start_col = start_right_col
           summary_start_row = avg_row_idx + 4
           ws_out.cell(
@@ -1044,7 +1054,6 @@ if st.sidebar.button("Proses Data", type="primary"):
             ac_cell.border = thin_border
             col_ptr += 1
 
-        # Auto-fit columns untuk sheet hasil akhir
         for sheet in wb_out.worksheets:
           for col in sheet.columns:
             max_len = 0
@@ -1062,7 +1071,6 @@ if st.sidebar.button("Proses Data", type="primary"):
         wb_out.save(summary_io)
         summary_io.seek(0)
 
-        # Simpan ke session state
         st.session_state.output_rekap_bytes = rekap_io.getvalue()
         st.session_state.output_summary_bytes = summary_io.getvalue()
         st.session_state.processed = True
@@ -1073,7 +1081,6 @@ if st.sidebar.button("Proses Data", type="primary"):
   else:
     st.warning("Mohon unggah kedua file Excel (.xlsx) terlebih dahulu pada sidebar.")
 
-# Bagian Tampilan Hasil dan Tombol Unduh (Memanfaatkan Session State)
 if st.session_state.processed:
   st.markdown("---")
   st.subheader("📥 Unduh Hasil Berkas Excel")
