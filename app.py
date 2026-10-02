@@ -20,13 +20,10 @@ st.set_page_config(
 # ==========================================
 st.markdown("""
 <style>
-    /* Mengubah latar belakang utama agar senada dengan tema gelap modern */
     .stApp {
         background-color: #0d1117;
         color: #c9d1d9;
     }
-    
-    /* Styling Header Utama */
     h1 {
         font-family: 'Inter', sans-serif;
         font-weight: 800;
@@ -36,8 +33,6 @@ st.markdown("""
         text-align: center;
         margin-bottom: 0px;
     }
-    
-    /* Styling Kartu / Kontainer */
     .metric-card {
         background: rgba(22, 27, 34, 0.7);
         border: 1px solid #30363d;
@@ -47,14 +42,10 @@ st.markdown("""
         backdrop-filter: blur(10px);
         text-align: center;
     }
-
-    /* Styling Sidebar */
     [data-testid="stSidebar"] {
         background-color: #161b22;
         border-right: 1px solid #30363d;
     }
-
-    /* Efek Tombol Futuristik */
     .stButton>button {
         background: linear-gradient(135deg, #1f6feb 0%, #238636 100%);
         color: white;
@@ -68,8 +59,6 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 0 25px rgba(35, 134, 54, 0.8);
     }
-
-    /* Styling Tab Menu */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: #161b22;
@@ -90,7 +79,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Judul & Deskripsi Futuristik
 st.markdown("<h1>PENGELOLAAN DATA PCP</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #8b949e; font-size: 16px;'>Sistem Otomasi Pintar & Rekapitulasi Data Produksi Berbasis Web</p>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
@@ -135,22 +123,17 @@ threshold_val = st.sidebar.number_input(
 st.sidebar.markdown("---")
 proses_btn = st.sidebar.button("⚡ EKSEKUSI PROSES DATA", use_container_width=True)
 
-# Fungsi Normalisasi Teks
 def clean_str(val):
     if pd.isna(val):
         return ""
     return re.sub(r'\s+', '', str(val)).upper()
 
-# Fungsi Utama Pemrosesan Data
 if proses_btn:
     if not uploaded_master or not uploaded_indicator:
         st.error("⚠️ Peringatan: Mohon unggah kedua file master terlebih dahulu melalui panel kontrol di sebelah kiri!")
     else:
         with st.spinner("🚀 Sistem sedang memproses algoritma data, harap tunggu..."):
             try:
-                # ==========================================
-                # TAHAP 1: PEMBUATAN DATA MASTER BERSIH
-                # ==========================================
                 df_raw = pd.read_excel(uploaded_master, header=None)
 
                 current_tanggal = ""
@@ -271,7 +254,6 @@ if proses_btn:
                 if not df_clean.empty:
                     df_clean = df_clean[final_columns]
 
-                # Simpan DATA BERSIH ke Excel Bytes
                 output_clean_io = BytesIO()
                 wb_clean = Workbook()
                 ws_c = wb_clean.active
@@ -288,9 +270,6 @@ if proses_btn:
                 wb_clean.save(output_clean_io)
                 output_clean_bytes = output_clean_io.getvalue()
 
-                # ==========================================
-                # TAHAP 2 & 3: REKAP KARYAWAN & MESIN
-                # ==========================================
                 df_master = pd.read_excel(uploaded_indicator)
                 df_clean['Mesin_Clean'] = df_clean['Mesin'].apply(clean_str)
                 df_master['clean_var'] = df_master['Nama Var.'].apply(clean_str)
@@ -453,11 +432,13 @@ if proses_btn:
                             ws.cell(row=current_row, column=9, value=target_90).number_format = '#,##0' if isinstance(target_90, int) else '#,##0.00'
                             
                             p90 = (total_real_cones / target_90) if target_90 > 0 else 0.0
-                            ws.cell(row=current_row, column=10, value=p90).number_format = '0.0%'
+                            # Diubah menjadi 2 angka di belakang koma (0.00%) agar konsisten
+                            ws.cell(row=current_row, column=10, value=p90).number_format = '0.00%'
                             ws.cell(row=current_row, column=11, value=target_100).number_format = '#,##0' if isinstance(target_100, int) else '#,##0.00'
                             
                             p100 = (total_real_cones / target_100) if target_100 > 0 else 0.0
-                            ws.cell(row=current_row, column=12, value=p100).number_format = '0.0%'
+                            # Diubah menjadi 2 angka di belakang koma (0.00%) agar konsisten
+                            ws.cell(row=current_row, column=12, value=p100).number_format = '0.00%'
                             ws.cell(row=current_row, column=13, value=qty_cones_val).number_format = '#,##0'
                             ws.cell(row=current_row, column=14, value=kg_val).number_format = '#,##0.00'
                             current_row += 1
@@ -490,7 +471,7 @@ if proses_btn:
                 wb_emp.save(output_emp_io)
                 output_emp_bytes = output_emp_io.getvalue()
 
-                # --- BUAT REKAP MESIN (EXCEL) - DIKUNCI BERDASARKAN TANGGAL DAN PEGAWAI AGAR SHIFT PANJANG MENYATU ---
+                # --- BUAT REKAP MESIN (EXCEL) ---
                 wb_mach = Workbook()
                 wb_mach.remove(wb_mach.active)
                 machines_raw = df_clean['Mesin'].unique()
@@ -541,8 +522,6 @@ if proses_btn:
 
                     current_row = 3
                     df_mach['Tanggal_Parsed'] = pd.to_datetime(df_mach['Tanggal'], errors='coerce')
-                    
-                    # Kunci pengelompokan disamakan dengan rekap karyawan (Tanpa Shift) agar shift panjang tidak terpecah
                     group_keys = df_mach.sort_values(['Tanggal_Parsed', 'Pegawai'])[['Tanggal', 'Pegawai']].drop_duplicates().values
                     unique_dates = sorted(df_mach['Tanggal_Parsed'].dropna().unique())
                     date_to_color_idx = {dt: idx % len(color_list) for idx, dt in enumerate(unique_dates)}
@@ -597,11 +576,13 @@ if proses_btn:
                             ws.cell(row=current_row, column=9, value=target_90).number_format = '#,##0' if isinstance(target_90, int) else '#,##0.00'
                             
                             p90 = (total_real_cones / target_90) if target_90 > 0 else 0.0
-                            ws.cell(row=current_row, column=10, value=p90).number_format = '0.0%'
+                            # Diubah menjadi 2 angka di belakang koma (0.00%) agar konsisten
+                            ws.cell(row=current_row, column=10, value=p90).number_format = '0.00%'
                             ws.cell(row=current_row, column=11, value=target_100).number_format = '#,##0' if isinstance(target_100, int) else '#,##0.00'
                             
                             p100 = (total_real_cones / target_100) if target_100 > 0 else 0.0
-                            ws.cell(row=current_row, column=12, value=p100).number_format = '0.0%'
+                            # Diubah menjadi 2 angka di belakang koma (0.00%) agar konsisten
+                            ws.cell(row=current_row, column=12, value=p100).number_format = '0.00%'
                             ws.cell(row=current_row, column=13, value=qty_cones_val).number_format = '#,##0'
                             ws.cell(row=current_row, column=14, value=kg_val).number_format = '#,##0.00'
                             current_row += 1
@@ -1034,7 +1015,6 @@ if proses_btn:
                 wb_out.save(output_summary_io)
                 output_summary_bytes = output_summary_io.getvalue()
 
-                # Simpan hasil ke session_state
                 st.session_state['processed'] = True
                 st.session_state['clean_bytes'] = output_clean_bytes
                 st.session_state['emp_bytes'] = output_emp_bytes
@@ -1061,7 +1041,6 @@ if proses_btn:
 if st.session_state.get('processed', False):
     st.markdown("---")
     
-    # Kartu Metrik Ringkasan Futuristik (Glassmorphism)
     col_m1, col_m2, col_m3 = st.columns(3)
     with col_m1:
         st.markdown(f"""
@@ -1088,6 +1067,9 @@ if st.session_state.get('processed', False):
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📊 Menu Navigasi Data & Unduhan")
     
+    # PERBAIKAN STABILITAS HALAMAN TAB:
+    # Menggunakan penamaan variabel penampung tab, lalu menempatkan filter selectbox 
+    # di dalam container/kolom stabil di atas atau tepat di dalam tab tanpa mereset render index utama.
     tab1, tab2, tab3, tab4 = st.tabs([
         "📁 Data Bersih", 
         "👥 Rekap per Karyawan", 
@@ -1117,8 +1099,8 @@ if st.session_state.get('processed', False):
         
         df_emp_all = st.session_state['df_emp_preview']
         daftar_karyawan = sorted(df_emp_all['Nama Karyawan'].dropna().unique().tolist())
-        # Penambahan key unik agar pilihan filter stabil dan tidak mereset halaman
-        pilihan_karyawan = st.selectbox("Pilih Nama Karyawan:", ["-- SEMUA KARYAWAN --"] + daftar_karyawan, key="filter_karyawan")
+        # Penambahan key spesifik agar Streamlit mengingat state pilihan tab
+        pilihan_karyawan = st.selectbox("Pilih Nama Karyawan:", ["-- SEMUA KARYAWAN --"] + daftar_karyawan, key="tab_filter_karyawan_stable")
 
         if pilihan_karyawan != "-- SEMUA KARYAWAN --":
             df_emp_filtered = df_emp_all[df_emp_all['Nama Karyawan'] == pilihan_karyawan]
@@ -1139,8 +1121,8 @@ if st.session_state.get('processed', False):
         
         df_mach_all = st.session_state['df_mach_preview']
         daftar_mesin = sorted(df_mach_all['Mesin'].dropna().unique().tolist())
-        # Penambahan key unik agar pilihan filter stabil dan tidak mereset halaman
-        pilihan_mesin = st.selectbox("Pilih Mesin Produksi:", ["-- SEMUA MESIN --"] + daftar_mesin, key="filter_mesin")
+        # Penambahan key spesifik agar Streamlit mengingat state pilihan tab
+        pilihan_mesin = st.selectbox("Pilih Mesin Produksi:", ["-- SEMUA MESIN --"] + daftar_mesin, key="tab_filter_mesin_stable")
 
         if pilihan_mesin != "-- SEMUA MESIN --":
             df_mach_filtered = df_mach_all[df_mach_all['Mesin'] == pilihan_mesin]
