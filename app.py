@@ -490,7 +490,7 @@ if proses_btn:
                 wb_emp.save(output_emp_io)
                 output_emp_bytes = output_emp_io.getvalue()
 
-                # --- BUAT REKAP MESIN (EXCEL) ---
+                # --- BUAT REKAP MESIN (EXCEL) - DIKUNCI BERDASARKAN TANGGAL DAN PEGAWAI AGAR SHIFT PANJANG MENYATU ---
                 wb_mach = Workbook()
                 wb_mach.remove(wb_mach.active)
                 machines_raw = df_clean['Mesin'].unique()
@@ -541,12 +541,17 @@ if proses_btn:
 
                     current_row = 3
                     df_mach['Tanggal_Parsed'] = pd.to_datetime(df_mach['Tanggal'], errors='coerce')
-                    group_keys = df_mach.sort_values(['Tanggal_Parsed', 'Pegawai', 'Shift'])[['Tanggal', 'Pegawai', 'Shift']].drop_duplicates().values
+                    
+                    # Kunci pengelompokan disamakan dengan rekap karyawan (Tanpa Shift) agar shift panjang tidak terpecah
+                    group_keys = df_mach.sort_values(['Tanggal_Parsed', 'Pegawai'])[['Tanggal', 'Pegawai']].drop_duplicates().values
                     unique_dates = sorted(df_mach['Tanggal_Parsed'].dropna().unique())
                     date_to_color_idx = {dt: idx % len(color_list) for idx, dt in enumerate(unique_dates)}
 
-                    for dt, peg, shf in group_keys:
-                        df_group = df_mach[(df_mach['Tanggal'] == dt) & (df_mach['Pegawai'] == peg) & (df_mach['Shift'] == shf)]
+                    for dt, peg in group_keys:
+                        df_group = df_mach[
+                            (df_mach['Tanggal'] == dt) &
+                            (df_mach['Pegawai'] == peg)
+                        ]
                         if df_group.empty:
                             continue
 
@@ -1112,7 +1117,8 @@ if st.session_state.get('processed', False):
         
         df_emp_all = st.session_state['df_emp_preview']
         daftar_karyawan = sorted(df_emp_all['Nama Karyawan'].dropna().unique().tolist())
-        pilihan_karyawan = st.selectbox("Pilih Nama Karyawan:", ["-- SEMUA KARYAWAN --"] + daftar_karyawan)
+        # Penambahan key unik agar pilihan filter stabil dan tidak mereset halaman
+        pilihan_karyawan = st.selectbox("Pilih Nama Karyawan:", ["-- SEMUA KARYAWAN --"] + daftar_karyawan, key="filter_karyawan")
 
         if pilihan_karyawan != "-- SEMUA KARYAWAN --":
             df_emp_filtered = df_emp_all[df_emp_all['Nama Karyawan'] == pilihan_karyawan]
@@ -1133,7 +1139,8 @@ if st.session_state.get('processed', False):
         
         df_mach_all = st.session_state['df_mach_preview']
         daftar_mesin = sorted(df_mach_all['Mesin'].dropna().unique().tolist())
-        pilihan_mesin = st.selectbox("Pilih Mesin Produksi:", ["-- SEMUA MESIN --"] + daftar_mesin)
+        # Penambahan key unik agar pilihan filter stabil dan tidak mereset halaman
+        pilihan_mesin = st.selectbox("Pilih Mesin Produksi:", ["-- SEMUA MESIN --"] + daftar_mesin, key="filter_mesin")
 
         if pilihan_mesin != "-- SEMUA MESIN --":
             df_mach_filtered = df_mach_all[df_mach_all['Mesin'] == pilihan_mesin]
