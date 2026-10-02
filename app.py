@@ -79,7 +79,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1>PENGELOLAAN DATA PCP</h1>", unsafe_allow_html=True)
+st.markdown("<h1>PENGELOLAAN DATA</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #8b949e; font-size: 16px;'>Sistem Otomasi Pintar & Rekapitulasi Data Produksi Berbasis Web</p>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
