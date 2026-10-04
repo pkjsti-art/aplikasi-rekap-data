@@ -247,10 +247,10 @@ if proses_btn:
 
                 df_clean = pd.DataFrame(parsed_rows)
                 
-                # --- TAMBAHAN MODIFIKASI SORTING TANGGAL (SECARA KRONOLOGIS) PADA DF_CLEAN ---
+                # --- SORTING TANGGAL SECARA KRONOLOGIS (ASCENDING: TANGGAL LAMA KE TERKINI) ---
                 if not df_clean.empty:
                     df_clean['Tanggal_Parsed'] = pd.to_datetime(df_clean['Tanggal'], errors='coerce')
-                    df_clean = df_clean.sort_values(by='Tanggal_Parsed').drop(columns=['Tanggal_Parsed'])
+                    df_clean = df_clean.sort_values(by='Tanggal_Parsed', ascending=True).drop(columns=['Tanggal_Parsed'])
 
                 final_columns = [
                     'Tanggal', 'Shift', 'NIP', 'Pegawai', 'Mesin',
@@ -392,8 +392,7 @@ if proses_btn:
 
                     current_row = 3
                     df_emp['Tanggal_Parsed'] = pd.to_datetime(df_emp['Tanggal'], errors='coerce')
-                    # MODIFIKASI SORTING TANGGAL: Menggunakan .sort_values(['Tanggal_Parsed']) agar urut dari awal bulan ke akhir
-                    date_machines = df_emp.sort_values(['Tanggal_Parsed'])[['Tanggal', 'Mesin_Clean']].drop_duplicates().values
+                    date_machines = df_emp.sort_values(['Tanggal_Parsed'], ascending=[True])[['Tanggal', 'Mesin_Clean']].drop_duplicates().values
 
                     for dt, m_clean in date_machines:
                         df_group = df_emp[(df_emp['Tanggal'] == dt) & (df_emp['Mesin_Clean'] == m_clean)]
@@ -527,8 +526,10 @@ if proses_btn:
 
                     current_row = 3
                     df_mach['Tanggal_Parsed'] = pd.to_datetime(df_mach['Tanggal'], errors='coerce')
-                    # MODIFIKASI SORTING TANGGAL: Menggunakan .sort_values(['Tanggal_Parsed', 'Pegawai']) agar tanggal urut dari awal ke akhir
-                    group_keys = df_mach.sort_values(['Tanggal_Parsed', 'Pegawai'])[['Tanggal', 'Pegawai']].drop_duplicates().values
+                    
+                    # --- SORTING TANGGAL ASCENDING (KRONOLOGIS DARI AWAL KE AKHIR BULAN) PADA REKAP MESIN ---
+                    group_keys = df_mach.sort_values(['Tanggal_Parsed', 'Pegawai'], ascending=[True, True])[['Tanggal', 'Pegawai']].drop_duplicates().values
+                    
                     unique_dates = sorted(df_mach['Tanggal_Parsed'].dropna().unique())
                     date_to_color_idx = {dt: idx % len(color_list) for idx, dt in enumerate(unique_dates)}
 
