@@ -247,10 +247,10 @@ if proses_btn:
 
                 df_clean = pd.DataFrame(parsed_rows)
                 
-                # --- SORTING TANGGAL SECARA KRONOLOGIS (ASCENDING: TANGGAL LAMA KE TERKINI) ---
+                # --- SORTING TANGGAL SECARA KRONOLOGIS KONSISTEN (ASCENDING) ---
                 if not df_clean.empty:
-                    df_clean['Tanggal_Parsed'] = pd.to_datetime(df_clean['Tanggal'], errors='coerce')
-                    df_clean = df_clean.sort_values(by='Tanggal_Parsed', ascending=True).drop(columns=['Tanggal_Parsed'])
+                    df_clean['Tanggal_Parsed'] = pd.to_datetime(df_clean['Tanggal'], format='%d/%m/%Y', errors='coerce')
+                    df_clean = df_clean.sort_values(by=['Tanggal_Parsed', 'Pegawai'], ascending=[True, True]).drop(columns=['Tanggal_Parsed'])
 
                 final_columns = [
                     'Tanggal', 'Shift', 'NIP', 'Pegawai', 'Mesin',
@@ -391,7 +391,7 @@ if proses_btn:
                         ws.merge_cells(start_row=1, start_column=col_idx, end_row=2, end_column=col_idx)
 
                     current_row = 3
-                    df_emp['Tanggal_Parsed'] = pd.to_datetime(df_emp['Tanggal'], errors='coerce')
+                    df_emp['Tanggal_Parsed'] = pd.to_datetime(df_emp['Tanggal'], format='%d/%m/%Y', errors='coerce')
                     date_machines = df_emp.sort_values(['Tanggal_Parsed'], ascending=[True])[['Tanggal', 'Mesin_Clean']].drop_duplicates().values
 
                     for dt, m_clean in date_machines:
@@ -525,9 +525,9 @@ if proses_btn:
                             ws.cell(row=r, column=c).fill = header_fill
 
                     current_row = 3
-                    df_mach['Tanggal_Parsed'] = pd.to_datetime(df_mach['Tanggal'], errors='coerce')
                     
-                    # --- SORTING TANGGAL ASCENDING (KRONOLOGIS DARI AWAL KE AKHIR BULAN) PADA REKAP MESIN ---
+                    # --- PARSING & SORTING KRONOLOGIS UNTUK REKAP MESIN ---
+                    df_mach['Tanggal_Parsed'] = pd.to_datetime(df_mach['Tanggal'], format='%d/%m/%Y', errors='coerce')
                     group_keys = df_mach.sort_values(['Tanggal_Parsed', 'Pegawai'], ascending=[True, True])[['Tanggal', 'Pegawai']].drop_duplicates().values
                     
                     unique_dates = sorted(df_mach['Tanggal_Parsed'].dropna().unique())
@@ -597,7 +597,7 @@ if proses_btn:
                             for col_idx in [1, 2, 3, 4, 5, 8, 9, 10, 11, 12]:
                                 ws.merge_cells(start_row=start_group_row, start_column=col_idx, end_row=end_group_row, end_column=col_idx)
 
-                        dt_parsed = pd.to_datetime(dt, errors='coerce')
+                        dt_parsed = pd.to_datetime(dt, format='%d/%m/%Y', errors='coerce')
                         if dt_parsed in date_to_color_idx:
                             c_idx = date_to_color_idx[dt_parsed]
                             hex_color = color_list[c_idx]
@@ -772,7 +772,7 @@ if proses_btn:
                     if nama_col and nama_col in df_group.columns:
                         df_group[nama_col] = df_group[nama_col].ffill()
 
-                    df_group['Parsed_Date'] = pd.to_datetime(df_group[tgl_col], errors='coerce')
+                    df_group['Parsed_Date'] = pd.to_datetime(df_group[tgl_col], format='%d/%m/%Y', errors='coerce')
                     df_group['Nama_Hari'] = df_group['Parsed_Date'].dt.weekday.map(days_map)
                     df_group['Minggu_Ke'] = df_group['Parsed_Date'].apply(get_calendar_week_mapping)
                     df_group['Mesin_Clean'] = df_group[mesin_col].astype(str).str.strip().str.upper()
