@@ -239,7 +239,7 @@ if proses_btn:
                                 'Group Pegawai': current_group,
                                 'Benang': benang,
                                 'Qty Cones': qty_cones,
-                                'KG': total_kg,  # Disimpan dengan nama kolom 'KG'
+                                'KG': total_kg,
                                 'Total Qty Cones': 0.0,
                                 'Total Qty KG': 0.0
                             }
@@ -633,7 +633,7 @@ if proses_btn:
                 sheet_names = wb_src.sheetnames
 
                 # ==========================================
-                # TAHAP 4: SUMMARY REKAP PER MINGGU
+                # TAHAP 4: SUMMARY REKAP PER MINGGU (PERBAIKAN)
                 # ==========================================
                 tahun_input = 2026
                 bulan_dict = {
@@ -766,10 +766,26 @@ if proses_btn:
                     mesin_col = 'MESIN' if 'MESIN' in df_group.columns else ('Mesin' if 'Mesin' in df_group.columns else df_group.columns[1])
                     nama_col = 'NAMA' if 'NAMA' in df_group.columns else ('Nama' if 'Nama' in df_group.columns else (df_group.columns[2] if len(df_group.columns) > 2 else None))
 
+                    col_persen_name, col_persen_idx_1based = None, None
+                    for idx, col_name in enumerate(df_group.columns):
+                        clean_col = str(col_name).upper().replace('\n', ' ')
+                        if 'TARGET 100%' in clean_col and 'CONES' in clean_col:
+                            if idx + 1 < len(df_group.columns):
+                                col_persen_name = df_group.columns[idx + 1]
+                                col_persen_idx_1based = idx + 2
+                            break
+
+                    if col_persen_name is None:
+                        col_persen_idx_1based = 12
+
+                    # --- LAKUKAN FFILL HANYA PADA DATAFRAME PROSES INTERNAL ---
+                    # (Tampilan visual Excel di ws_out tetap ter-merge)
                     df_group[tgl_col] = df_group[tgl_col].ffill()
                     df_group[mesin_col] = df_group[mesin_col].ffill()
                     if nama_col and nama_col in df_group.columns:
                         df_group[nama_col] = df_group[nama_col].ffill()
+                    if col_persen_name and col_persen_name in df_group.columns:
+                        df_group[col_persen_name] = df_group[col_persen_name].ffill()
 
                     df_group['Parsed_Date'] = pd.to_datetime(df_group[tgl_col], format='%d/%m/%Y', errors='coerce')
                     df_group['Nama_Hari'] = df_group['Parsed_Date'].dt.weekday.map(days_map)
@@ -787,18 +803,6 @@ if proses_btn:
                     max_orig_col = ws_out.max_column
                     start_right_col = max_orig_col + 3
                     mesin_in_group = sorted(df_group['Mesin_Clean'].unique())
-
-                    col_persen_name, col_persen_idx_1based = None, None
-                    for idx, col_name in enumerate(df_group.columns):
-                        clean_col = str(col_name).upper().replace('\n', ' ')
-                        if 'TARGET 100%' in clean_col and 'CONES' in clean_col:
-                            if idx + 1 < len(df_group.columns):
-                                col_persen_name = df_group.columns[idx + 1]
-                                col_persen_idx_1based = idx + 2
-                            break
-
-                    if col_persen_name is None:
-                        col_persen_idx_1based = 12
 
                     current_check_row = 3
                     for sheet_idx, s_name in enumerate(s_list):
@@ -830,7 +834,6 @@ if proses_btn:
                             r_idx += (group_end_row_in_out - actual_row_in_out + 1)
                         current_check_row += ws_src_sheet.max_row
 
-                    # --- MODIFIKASI LOGIKA PERHITUNGAN DARI POTONGAN KODE LAMA ---
                     for m_idx, mesin in enumerate(mesin_in_group):
                         df_mesin = df_group[df_group['Mesin_Clean'] == mesin]
                         minggu_list = sorted(df_mesin['Minggu_Ke'].unique())
@@ -875,7 +878,6 @@ if proses_btn:
 
                                 for _, row_item in df_day.iterrows():
                                     p_f = parse_percentage_value(row_item.get(col_persen_name))
-                                    # Mengabaikan nilai persentase di bawah threshold minimum
                                     if p_f is not None and p_f >= threshold_val:
                                         c_val = row_item.get(col_cones_name, 0.0)
                                         if pd.notna(c_val):
@@ -887,12 +889,9 @@ if proses_btn:
                                             try: valid_kg_list.append(float(str(k_val).replace(',', '.')))
                                             except: pass
 
-                                # --- PERHITUNGAN NILAI HARIAN ---
-                                # Total Cones = Penjumlahan seluruh cones valid
+                                # --- AKURASI PERHITUNGAN HARIAN ---
                                 val_cones = sum(valid_cones_list) if valid_cones_list else 0.0
-                                # Persentase Hasil = Rata-rata persentase valid
                                 val_persen = np.mean(valid_persen_list) if valid_persen_list else 0.0
-                                # Hasil (KG) = Penjumlahan seluruh KG valid
                                 val_kg = sum(valid_kg_list) if valid_kg_list else 0.0
                                 
                                 row_data_store.append((val_cones, val_persen, val_kg))
@@ -904,14 +903,11 @@ if proses_btn:
                             # --- PENULISAN DENGAN FORMAT EXCEL ---
                             for d_i, (val_cones, val_persen, val_kg) in enumerate(row_data_store):
                                 row_target_idx = 3 + d_i
-                                # Write Total Cones
                                 ws_out.cell(row=row_target_idx, column=col_offset, value=round(val_cones, 1) if val_cones > 0 else 0)
                                 
-                                # Write Persentase Hasil (dengan format 0.00%)
                                 c2 = ws_out.cell(row=row_target_idx, column=col_offset + 1, value="-" if val_persen == 0 else round(val_persen / 100.0, 4))
                                 if val_persen > 0: c2.number_format = '0.00%'
                                 
-                                # Write Hasil (KG)
                                 ws_out.cell(row=row_target_idx, column=col_offset + 2, value="-" if val_kg == 0 else round(val_kg, 2))
 
                             # --- PERHITUNGAN BARIS RATA-RATA MINGGUAN ---
@@ -971,13 +967,11 @@ if proses_btn:
                                 if p_f is not None and p_f >= threshold_val:
                                     valid_p_vals.append(p_f)
 
-                            # Rata-rata persentase per hari
                             val_persen = np.mean(valid_p_vals) if valid_p_vals else 0.0
                             row_values_to_write.append(val_persen)
                             if val_persen > 0:
                                 day_percentages_for_avg.append(val_persen)
 
-                        # Penulisan ke sel Excel
                         for d_i, val_persen in enumerate(row_values_to_write):
                             row_idx = t_header_row2 + 1 + d_i
                             c_cell = ws_out.cell(row=row_idx, column=col_ptr, value="-" if val_persen == 0 else round(val_persen / 100.0, 4))
@@ -1001,7 +995,6 @@ if proses_btn:
 
                     col_ptr = summary_start_col + 1
                     for mesin, w in combo_list:
-                        # Rata-rata persentase total per mesin/minggu
                         p_list = col_data_dict[col_ptr]
                         col_avg = np.mean(p_list) if p_list else 0.0
                         ac_cell = ws_out.cell(row=avg_row_summary, column=col_ptr, value="-" if col_avg == 0 else round(col_avg / 100.0, 4))
@@ -1043,7 +1036,7 @@ if proses_btn:
                 df_rekap_mesin.columns = ['Tanggal', 'Mesin', 'Nama Karyawan', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
                 st.session_state['df_mach_preview'] = df_rekap_mesin
 
-                st.success("⚡ Pemrosesan Data Sukses! Sistem Siap Digunakan.")
+                st.success("⚡ Pemrosesan Data Sukses! Perhitungan Hasil KG dan Total Cones telah diperbaiki.")
 
             except Exception as e:
                 st.error(f"❌ Error Sistem: {e}")
