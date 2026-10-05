@@ -86,17 +86,17 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ==========================================
 # SIDEBAR: PENGATURAN & UNGGAH BERKAS
 # ==========================================
-st.sidebar.markdown("### 🎛️️ Panel Kontrol Utama")
+st.sidebar.markdown("### 🎛️ Panel Kontrol Utama")
 st.sidebar.markdown("---")
 
 uploaded_master = st.sidebar.file_uploader(
-    "📁 1. Master Ekspor Sistem (.xlsx)", 
+    "📁 1. Master Ekspor Sistem (.xlsx)",
     type=["xlsx"],
     help="Unggah file laporan utama dari sistem."
 )
 
 uploaded_indicator = st.sidebar.file_uploader(
-    "📁 2. Master Indikator (.xlsx)", 
+    "📁 2. Master Indikator (.xlsx)",
     type=["xlsx"],
     help="Unggah file acuan target, waktu, dan spindle."
 )
@@ -106,7 +106,7 @@ st.sidebar.markdown("### ⚙️ Parameter Pengolahan")
 
 bulan_pilihan = st.sidebar.selectbox(
     "🗓️ Pilih Bulan Laporan",
-    ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", 
+    ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI",
      "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"],
     index=8
 )
@@ -239,22 +239,16 @@ if proses_btn:
                                 'Group Pegawai': current_group,
                                 'Benang': benang,
                                 'Qty Cones': qty_cones,
-                                'KG': total_kg,  # Disimpan dengan nama kolom 'KG'
+                                'Total': total_kg,
                                 'Total Qty Cones': 0.0,
                                 'Total Qty KG': 0.0
                             }
                             temp_group_rows.append(row_dict)
 
                 df_clean = pd.DataFrame(parsed_rows)
-                
-                # --- SORTING TANGGAL SECARA KRONOLOGIS KONSISTEN (ASCENDING) ---
-                if not df_clean.empty:
-                    df_clean['Tanggal_Parsed'] = pd.to_datetime(df_clean['Tanggal'], format='%d/%m/%Y', errors='coerce')
-                    df_clean = df_clean.sort_values(by=['Tanggal_Parsed', 'Pegawai'], ascending=[True, True]).drop(columns=['Tanggal_Parsed'])
-
                 final_columns = [
                     'Tanggal', 'Shift', 'NIP', 'Pegawai', 'Mesin',
-                    'Group Pegawai', 'Benang', 'Qty Cones', 'KG',
+                    'Group Pegawai', 'Benang', 'Qty Cones', 'Total',
                     'Total Qty Cones', 'Total Qty KG'
                 ]
                 if not df_clean.empty:
@@ -267,7 +261,7 @@ if proses_btn:
                 ws_c.append(final_columns)
                 for _, row_data in df_clean.iterrows():
                     ws_c.append(list(row_data))
-                
+
                 for col in ws_c.columns:
                     max_len = max(len(str(cell.value or '')) for cell in col)
                     col_letter = get_column_letter(col[0].column)
@@ -391,8 +385,8 @@ if proses_btn:
                         ws.merge_cells(start_row=1, start_column=col_idx, end_row=2, end_column=col_idx)
 
                     current_row = 3
-                    df_emp['Tanggal_Parsed'] = pd.to_datetime(df_emp['Tanggal'], format='%d/%m/%Y', errors='coerce')
-                    date_machines = df_emp.sort_values(['Tanggal_Parsed'], ascending=[True])[['Tanggal', 'Mesin_Clean']].drop_duplicates().values
+                    df_emp['Tanggal_Parsed'] = pd.to_datetime(df_emp['Tanggal'], errors='coerce')
+                    date_machines = df_emp.sort_values('Tanggal_Parsed')[['Tanggal', 'Mesin_Clean']].drop_duplicates().values
 
                     for dt, m_clean in date_machines:
                         df_group = df_emp[(df_emp['Tanggal'] == dt) & (df_emp['Mesin_Clean'] == m_clean)]
@@ -422,7 +416,7 @@ if proses_btn:
                             qty_cones_val = row['Qty Cones']
                             if qty_cones_val.is_integer():
                                 qty_cones_val = int(qty_cones_val)
-                            kg_val = row['KG'] if 'KG' in row else 0.0
+                            kg_val = row['Total'] if 'Total' in row else 0.0
                             q_real_val = row['Qty Real Cones']
                             if q_real_val.is_integer():
                                 q_real_val = int(q_real_val)
@@ -436,12 +430,14 @@ if proses_btn:
                             ws.cell(row=current_row, column=7, value=q_real_val).number_format = '#,##0'
                             ws.cell(row=current_row, column=8, value=total_real_cones).number_format = '#,##0'
                             ws.cell(row=current_row, column=9, value=target_90).number_format = '#,##0' if isinstance(target_90, int) else '#,##0.00'
-                            
+
                             p90 = (total_real_cones / target_90) if target_90 > 0 else 0.0
+                            # Diubah menjadi 2 angka di belakang koma (0.00%) agar konsisten
                             ws.cell(row=current_row, column=10, value=p90).number_format = '0.00%'
                             ws.cell(row=current_row, column=11, value=target_100).number_format = '#,##0' if isinstance(target_100, int) else '#,##0.00'
-                            
+
                             p100 = (total_real_cones / target_100) if target_100 > 0 else 0.0
+                            # Diubah menjadi 2 angka di belakang koma (0.00%) agar konsisten
                             ws.cell(row=current_row, column=12, value=p100).number_format = '0.00%'
                             ws.cell(row=current_row, column=13, value=qty_cones_val).number_format = '#,##0'
                             ws.cell(row=current_row, column=14, value=kg_val).number_format = '#,##0.00'
@@ -525,10 +521,8 @@ if proses_btn:
                             ws.cell(row=r, column=c).fill = header_fill
 
                     current_row = 3
-                    
-                    df_mach['Tanggal_Parsed'] = pd.to_datetime(df_mach['Tanggal'], format='%d/%m/%Y', errors='coerce')
-                    group_keys = df_mach.sort_values(['Tanggal_Parsed', 'Pegawai'], ascending=[True, True])[['Tanggal', 'Pegawai']].drop_duplicates().values
-                    
+                    df_mach['Tanggal_Parsed'] = pd.to_datetime(df_mach['Tanggal'], errors='coerce')
+                    group_keys = df_mach.sort_values(['Tanggal_Parsed', 'Pegawai'])[['Tanggal', 'Pegawai']].drop_duplicates().values
                     unique_dates = sorted(df_mach['Tanggal_Parsed'].dropna().unique())
                     date_to_color_idx = {dt: idx % len(color_list) for idx, dt in enumerate(unique_dates)}
 
@@ -566,7 +560,7 @@ if proses_btn:
                             qty_cones_val = row['Qty Cones']
                             if qty_cones_val.is_integer():
                                 qty_cones_val = int(qty_cones_val)
-                            kg_val = row['KG'] if 'KG' in row else 0.0
+                            kg_val = row['Total'] if 'Total' in row else 0.0
                             q_real_val = row['Qty Real Cones']
                             if q_real_val.is_integer():
                                 q_real_val = int(q_real_val)
@@ -580,12 +574,14 @@ if proses_btn:
                             ws.cell(row=current_row, column=7, value=q_real_val).number_format = '#,##0'
                             ws.cell(row=current_row, column=8, value=total_real_cones).number_format = '#,##0'
                             ws.cell(row=current_row, column=9, value=target_90).number_format = '#,##0' if isinstance(target_90, int) else '#,##0.00'
-                            
+
                             p90 = (total_real_cones / target_90) if target_90 > 0 else 0.0
+                            # Diubah menjadi 2 angka di belakang koma (0.00%) agar konsisten
                             ws.cell(row=current_row, column=10, value=p90).number_format = '0.00%'
                             ws.cell(row=current_row, column=11, value=target_100).number_format = '#,##0' if isinstance(target_100, int) else '#,##0.00'
-                            
+
                             p100 = (total_real_cones / target_100) if target_100 > 0 else 0.0
+                            # Diubah menjadi 2 angka di belakang koma (0.00%) agar konsisten
                             ws.cell(row=current_row, column=12, value=p100).number_format = '0.00%'
                             ws.cell(row=current_row, column=13, value=qty_cones_val).number_format = '#,##0'
                             ws.cell(row=current_row, column=14, value=kg_val).number_format = '#,##0.00'
@@ -596,7 +592,7 @@ if proses_btn:
                             for col_idx in [1, 2, 3, 4, 5, 8, 9, 10, 11, 12]:
                                 ws.merge_cells(start_row=start_group_row, start_column=col_idx, end_row=end_group_row, end_column=col_idx)
 
-                        dt_parsed = pd.to_datetime(dt, format='%d/%m/%Y', errors='coerce')
+                        dt_parsed = pd.to_datetime(dt, errors='coerce')
                         if dt_parsed in date_to_color_idx:
                             c_idx = date_to_color_idx[dt_parsed]
                             hex_color = color_list[c_idx]
@@ -771,7 +767,7 @@ if proses_btn:
                     if nama_col and nama_col in df_group.columns:
                         df_group[nama_col] = df_group[nama_col].ffill()
 
-                    df_group['Parsed_Date'] = pd.to_datetime(df_group[tgl_col], format='%d/%m/%Y', errors='coerce')
+                    df_group['Parsed_Date'] = pd.to_datetime(df_group[tgl_col], errors='coerce')
                     df_group['Nama_Hari'] = df_group['Parsed_Date'].dt.weekday.map(days_map)
                     df_group['Minggu_Ke'] = df_group['Parsed_Date'].apply(get_calendar_week_mapping)
                     df_group['Mesin_Clean'] = df_group[mesin_col].astype(str).str.strip().str.upper()
@@ -799,6 +795,17 @@ if proses_btn:
 
                     if col_persen_name is None:
                         col_persen_idx_1based = 12
+
+                    col_kg_name = None
+                    for idx, col_name in enumerate(df_group.columns):
+                        clean_col = str(col_name).upper().replace('\n', ' ')
+                        if 'CONES' in clean_col and not 'TOTAL' in clean_col and not 'TARGET' in clean_col:
+                            if idx + 1 < len(df_group.columns):
+                                col_kg_name = df_group.columns[idx + 1]
+                                break
+                    if col_kg_name is None:
+                        kg_candidates = [c for c in df_group.columns if str(c).strip().upper() == 'KG']
+                        col_kg_name = kg_candidates[0] if kg_candidates else df_group.columns[-1]
 
                     current_check_row = 3
                     for sheet_idx, s_name in enumerate(s_list):
@@ -866,7 +873,6 @@ if proses_btn:
                             daily_cones_for_avg, daily_persen_for_avg, daily_kg_for_avg = [], [], []
                             row_data_store = []
                             col_cones_name = next((c for c in df_group.columns if 'CONES' in c.upper() and 'TOTAL' in c.upper()), df_group.columns[7])
-                            col_kg_name = next((c for c in df_group.columns if str(c).upper().strip() == 'KG'), df_group.columns[13])
 
                             for day_name in days_order:
                                 df_day = df_minggu[df_minggu['Nama_Hari'] == day_name]
@@ -874,25 +880,20 @@ if proses_btn:
 
                                 for _, row_item in df_day.iterrows():
                                     p_f = parse_percentage_value(row_item.get(col_persen_name))
-                                    
-                                    # ATURAN THRESHOLD: Hanya baris yang memenuhi threshold yang diambil datanya
                                     if p_f is not None and p_f >= threshold_val:
-                                        valid_persen_list.append(p_f)
-                                        
                                         c_val = row_item.get(col_cones_name, 0.0)
                                         if pd.notna(c_val):
                                             try: valid_cones_list.append(float(c_val))
                                             except: pass
-
-                                        # AMBIL DENGAN LOGIKA YANG SAMA PERSIS SEPERTI TOTAL CONES
+                                        valid_persen_list.append(p_f)
                                         k_val = row_item.get(col_kg_name, 0.0)
                                         if pd.notna(k_val):
-                                            try: valid_kg_list.append(float(k_val))
+                                            try: valid_kg_list.append(float(str(k_val).replace(',', '.')))
                                             except: pass
 
                                 val_cones = sum(valid_cones_list) if valid_cones_list else 0.0
                                 val_persen = np.mean(valid_persen_list) if valid_persen_list else 0.0
-                                val_kg = sum(valid_kg_list) if valid_kg_list else 0.0  
+                                val_kg = sum(valid_kg_list) if valid_kg_list else 0.0
                                 row_data_store.append((val_cones, val_persen, val_kg))
 
                                 if val_cones > 0: daily_cones_for_avg.append(val_cones)
@@ -1020,12 +1021,12 @@ if proses_btn:
                 st.session_state['mach_bytes'] = output_mach_bytes
                 st.session_state['summary_bytes'] = output_summary_bytes
                 st.session_state['df_clean_preview'] = df_clean
-                
-                df_rekap_karyawan = df_clean[['Tanggal', 'Pegawai', 'Mesin', 'Shift_Final', 'Benang', 'Qty Cones', 'Qty Real Cones', 'KG']].copy()
+
+                df_rekap_karyawan = df_clean[['Tanggal', 'Pegawai', 'Mesin', 'Shift_Final', 'Benang', 'Qty Cones', 'Qty Real Cones', 'Total']].copy()
                 df_rekap_karyawan.columns = ['Tanggal', 'Nama Karyawan', 'Mesin', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
                 st.session_state['df_emp_preview'] = df_rekap_karyawan
 
-                df_rekap_mesin = df_clean[['Tanggal', 'Mesin', 'Pegawai', 'Shift_Final', 'Benang', 'Qty Cones', 'Qty Real Cones', 'KG']].copy()
+                df_rekap_mesin = df_clean[['Tanggal', 'Mesin', 'Pegawai', 'Shift_Final', 'Benang', 'Qty Cones', 'Qty Real Cones', 'Total']].copy()
                 df_rekap_mesin.columns = ['Tanggal', 'Mesin', 'Nama Karyawan', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
                 st.session_state['df_mach_preview'] = df_rekap_mesin
 
@@ -1039,7 +1040,7 @@ if proses_btn:
 # ==========================================
 if st.session_state.get('processed', False):
     st.markdown("---")
-    
+
     col_m1, col_m2, col_m3 = st.columns(3)
     with col_m1:
         st.markdown(f"""
@@ -1065,11 +1066,14 @@ if st.session_state.get('processed', False):
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📊 Menu Navigasi Data & Unduhan")
-    
+
+    # PERBAIKAN STABILITAS HALAMAN TAB:
+    # Menggunakan penamaan variabel penampung tab, lalu menempatkan filter selectbox
+    # di dalam container/kolom stabil di atas atau tepat di dalam tab tanpa mereset render index utama.
     tab1, tab2, tab3, tab4 = st.tabs([
-        "📁 Data Bersih", 
-        "👥 Rekap per Karyawan", 
-        "⚙️ Rekap per Mesin", 
+        "📁 Data Bersih",
+        "👥 Rekap per Karyawan",
+        "⚙️ Rekap per Mesin",
         "📅 Summary per Minggu"
     ])
 
@@ -1092,9 +1096,10 @@ if st.session_state.get('processed', False):
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         st.info("💡 Saring data berdasarkan nama karyawan untuk analisis performa individu:")
-        
+
         df_emp_all = st.session_state['df_emp_preview']
         daftar_karyawan = sorted(df_emp_all['Nama Karyawan'].dropna().unique().tolist())
+        # Penambahan key spesifik agar Streamlit mengingat state pilihan tab
         pilihan_karyawan = st.selectbox("Pilih Nama Karyawan:", ["-- SEMUA KARYAWAN --"] + daftar_karyawan, key="tab_filter_karyawan_stable")
 
         if pilihan_karyawan != "-- SEMUA KARYAWAN --":
@@ -1113,9 +1118,10 @@ if st.session_state.get('processed', False):
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         st.info("💡 Saring data berdasarkan mesin produksi untuk memantau performa unit mesin:")
-        
+
         df_mach_all = st.session_state['df_mach_preview']
         daftar_mesin = sorted(df_mach_all['Mesin'].dropna().unique().tolist())
+        # Penambahan key spesifik agar Streamlit mengingat state pilihan tab
         pilihan_mesin = st.selectbox("Pilih Mesin Produksi:", ["-- SEMUA MESIN --"] + daftar_mesin, key="tab_filter_mesin_stable")
 
         if pilihan_mesin != "-- SEMUA MESIN --":
