@@ -898,7 +898,7 @@ if proses_btn:
 
                                 val_cones = sum(valid_cones_list) if valid_cones_list else 0.0
                                 val_persen = np.mean(valid_persen_list) if valid_persen_list else 0.0
-                                val_kg = sum(valid_kg_list) if valid_kg_list else 0.0
+                                val_kg = sum(valid_kg_list) if valid_kg_list else 0.0  # DIUBAH MENJADI PENJUMLAHAN (SUM)
                                 row_data_store.append((val_cones, val_persen, val_kg))
 
                                 if val_cones > 0: daily_cones_for_avg.append(val_cones)
