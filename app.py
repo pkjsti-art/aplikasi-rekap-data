@@ -526,7 +526,6 @@ if proses_btn:
 
                     current_row = 3
                     
-                    # --- PARSING & SORTING KRONOLOGIS UNTUK REKAP MESIN ---
                     df_mach['Tanggal_Parsed'] = pd.to_datetime(df_mach['Tanggal'], format='%d/%m/%Y', errors='coerce')
                     group_keys = df_mach.sort_values(['Tanggal_Parsed', 'Pegawai'], ascending=[True, True])[['Tanggal', 'Pegawai']].drop_duplicates().values
                     
@@ -884,23 +883,25 @@ if proses_btn:
                                 valid_cones_list, valid_persen_list, valid_kg_list = [], [], []
 
                                 for _, row_item in df_day.iterrows():
-                                    c_val = row_item.get(col_cones_name, 0.0)
-                                    if pd.notna(c_val):
-                                        try: valid_cones_list.append(float(c_val))
-                                        except: pass
-                                    
                                     p_f = parse_percentage_value(row_item.get(col_persen_name))
+                                    
+                                    # Pengecekan threshold: Jika persentase di bawah threshold, abaikan nilai Cones dan KG-nya
                                     if p_f is not None and p_f >= threshold_val:
                                         valid_persen_list.append(p_f)
+                                        
+                                        c_val = row_item.get(col_cones_name, 0.0)
+                                        if pd.notna(c_val):
+                                            try: valid_cones_list.append(float(c_val))
+                                            except: pass
 
-                                    k_val = row_item.get(col_kg_name, 0.0)
-                                    if pd.notna(k_val):
-                                        try: valid_kg_list.append(float(str(k_val).replace(',', '.')))
-                                        except: pass
+                                        k_val = row_item.get(col_kg_name, 0.0)
+                                        if pd.notna(k_val):
+                                            try: valid_kg_list.append(float(str(k_val).replace(',', '.')))
+                                            except: pass
 
                                 val_cones = sum(valid_cones_list) if valid_cones_list else 0.0
                                 val_persen = np.mean(valid_persen_list) if valid_persen_list else 0.0
-                                val_kg = sum(valid_kg_list) if valid_kg_list else 0.0  # PENJUMLAHAN TOTAL KG PADA HARI TERSEBUT
+                                val_kg = sum(valid_kg_list) if valid_kg_list else 0.0  
                                 row_data_store.append((val_cones, val_persen, val_kg))
 
                                 if val_cones > 0: daily_cones_for_avg.append(val_cones)
