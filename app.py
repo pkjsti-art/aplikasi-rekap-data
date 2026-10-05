@@ -800,15 +800,11 @@ if proses_btn:
                     if col_persen_name is None:
                         col_persen_idx_1based = 12
 
-                    col_kg_name = None
-                    for idx, col_name in enumerate(df_group.columns):
-                        clean_col = str(col_name).upper().replace('\n', ' ')
-                        if 'CONES' in clean_col and not 'TOTAL' in clean_col and not 'TARGET' in clean_col:
-                            if idx + 1 < len(df_group.columns):
-                                col_kg_name = df_group.columns[idx + 1]
-                                break
-                    if col_kg_name is None:
-                        kg_candidates = [c for c in df_group.columns if str(c).strip().upper() == 'KG']
+                    # --- PERBAIKAN PADA PENENTUAN KOLOM KG (MERUJUK KE 'Total') ---
+                    if 'Total' in df_group.columns:
+                        col_kg_name = 'Total'
+                    else:
+                        kg_candidates = [c for c in df_group.columns if 'KG' in str(c).upper() or 'TOTAL' in str(c).upper()]
                         col_kg_name = kg_candidates[0] if kg_candidates else df_group.columns[-1]
 
                     current_check_row = 3
@@ -885,7 +881,6 @@ if proses_btn:
                                 for _, row_item in df_day.iterrows():
                                     p_f = parse_percentage_value(row_item.get(col_persen_name))
                                     
-                                    # Pengecekan threshold: Jika persentase di bawah threshold, abaikan nilai Cones dan KG-nya
                                     if p_f is not None and p_f >= threshold_val:
                                         valid_persen_list.append(p_f)
                                         
