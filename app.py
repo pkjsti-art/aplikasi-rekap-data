@@ -6,6 +6,7 @@ import pandas as pd
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+import streamlit as st  # <-- PERBAIKAN: Menambahkan import streamlit
 
 # Pengaturan Halaman Streamlit
 st.set_page_config(
@@ -1253,17 +1254,13 @@ if proses_btn:
                     [],
                 )
 
-                # MODIFIKASI: Logika pengelompokan per tanggal dan mesin yang sama persis seperti TOTAL CONES
-                # Grup per (Tanggal, Mesin_Clean) lalu jumlahkan KG (kolom paling kanan) dan Cones-nya
                 if not df_day.empty:
-                  # Kelompokkan data per tanggal dan mesin yang sama untuk menghindari duplikasi penjumlahan baris shift/transaksi ganda
                   grouped_day = (
                       df_day.groupby(["Tanggal", "Mesin_Clean"])
                       .agg({col_cones_name: "sum", col_kg_name: "sum"})
                       .reset_index()
                   )
                   for _, g_row in grouped_day.iterrows():
-                    # Ambil persentase rata-rata dari baris asli di grup tersebut untuk pengecekan threshold
                     sub_orig = df_day[
                         (df_day["Tanggal"] == g_row["Tanggal"])
                         & (df_day["Mesin_Clean"] == g_row["Mesin_Clean"])
