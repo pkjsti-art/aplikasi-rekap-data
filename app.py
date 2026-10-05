@@ -800,13 +800,6 @@ if proses_btn:
                     if col_persen_name is None:
                         col_persen_idx_1based = 12
 
-                    # --- PERBAIKAN PADA PENENTUAN KOLOM KG (MERUJUK KE 'Total') ---
-                    if 'Total' in df_group.columns:
-                        col_kg_name = 'Total'
-                    else:
-                        kg_candidates = [c for c in df_group.columns if 'KG' in str(c).upper() or 'TOTAL' in str(c).upper()]
-                        col_kg_name = kg_candidates[0] if kg_candidates else df_group.columns[-1]
-
                     current_check_row = 3
                     for sheet_idx, s_name in enumerate(s_list):
                         if sheet_idx > 0:
@@ -881,6 +874,7 @@ if proses_btn:
                                 for _, row_item in df_day.iterrows():
                                     p_f = parse_percentage_value(row_item.get(col_persen_name))
                                     
+                                    # ATURAN THRESHOLD: Hanya baris yang memenuhi threshold yang diambil datanya
                                     if p_f is not None and p_f >= threshold_val:
                                         valid_persen_list.append(p_f)
                                         
@@ -889,13 +883,15 @@ if proses_btn:
                                             try: valid_cones_list.append(float(c_val))
                                             except: pass
 
-                                        k_val = row_item.get(col_kg_name, 0.0)
+                                        # AMBIL DARI KOLOM KG INDIVIDU ('Total') YANG BERADA DI SEBELAH KOLOM CONES
+                                        k_val = row_item.get('Total', 0.0)
                                         if pd.notna(k_val):
                                             try: valid_kg_list.append(float(str(k_val).replace(',', '.')))
                                             except: pass
 
                                 val_cones = sum(valid_cones_list) if valid_cones_list else 0.0
                                 val_persen = np.mean(valid_persen_list) if valid_persen_list else 0.0
+                                # MENJUMLAHKAN (SUM) SELURUH NILAI KG INDIVIDU YANG LOLOS THRESHOLD PADA HARI TERSEBUT
                                 val_kg = sum(valid_kg_list) if valid_kg_list else 0.0  
                                 row_data_store.append((val_cones, val_persen, val_kg))
 
