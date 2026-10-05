@@ -239,7 +239,7 @@ if proses_btn:
                                 'Group Pegawai': current_group,
                                 'Benang': benang,
                                 'Qty Cones': qty_cones,
-                                'Total': total_kg,
+                                'KG': total_kg,  # Disimpan dengan nama kolom 'KG'
                                 'Total Qty Cones': 0.0,
                                 'Total Qty KG': 0.0
                             }
@@ -254,7 +254,7 @@ if proses_btn:
 
                 final_columns = [
                     'Tanggal', 'Shift', 'NIP', 'Pegawai', 'Mesin',
-                    'Group Pegawai', 'Benang', 'Qty Cones', 'Total',
+                    'Group Pegawai', 'Benang', 'Qty Cones', 'KG',
                     'Total Qty Cones', 'Total Qty KG'
                 ]
                 if not df_clean.empty:
@@ -422,7 +422,7 @@ if proses_btn:
                             qty_cones_val = row['Qty Cones']
                             if qty_cones_val.is_integer():
                                 qty_cones_val = int(qty_cones_val)
-                            kg_val = row['Total'] if 'Total' in row else 0.0
+                            kg_val = row['KG'] if 'KG' in row else 0.0
                             q_real_val = row['Qty Real Cones']
                             if q_real_val.is_integer():
                                 q_real_val = int(q_real_val)
@@ -566,7 +566,7 @@ if proses_btn:
                             qty_cones_val = row['Qty Cones']
                             if qty_cones_val.is_integer():
                                 qty_cones_val = int(qty_cones_val)
-                            kg_val = row['Total'] if 'Total' in row else 0.0
+                            kg_val = row['KG'] if 'KG' in row else 0.0
                             q_real_val = row['Qty Real Cones']
                             if q_real_val.is_integer():
                                 q_real_val = int(q_real_val)
@@ -883,15 +883,17 @@ if proses_btn:
                                             try: valid_cones_list.append(float(c_val))
                                             except: pass
 
-                                        # AMBIL DARI KOLOM KG INDIVIDU ('Total') YANG BERADA DI SEBELAH KOLOM CONES
-                                        k_val = row_item.get('Total', 0.0)
+                                        # AMBIL LANGSUNG DARI KOLOM 'KG'
+                                        k_val = row_item.get('KG', 0.0)
                                         if pd.notna(k_val):
-                                            try: valid_kg_list.append(float(str(k_val).replace(',', '.')))
-                                            except: pass
+                                            try:
+                                                valid_kg_list.append(float(str(k_val).replace(',', '.')))
+                                            except:
+                                                pass
 
                                 val_cones = sum(valid_cones_list) if valid_cones_list else 0.0
                                 val_persen = np.mean(valid_persen_list) if valid_persen_list else 0.0
-                                # MENJUMLAHKAN (SUM) SELURUH NILAI KG INDIVIDU YANG LOLOS THRESHOLD PADA HARI TERSEBUT
+                                # MENJUMLAHKAN (SUM) SELURUH NILAI KG DARI KOLOM KG YANG LOLOS THRESHOLD PADA HARI TERSEBUT
                                 val_kg = sum(valid_kg_list) if valid_kg_list else 0.0  
                                 row_data_store.append((val_cones, val_persen, val_kg))
 
@@ -1021,11 +1023,11 @@ if proses_btn:
                 st.session_state['summary_bytes'] = output_summary_bytes
                 st.session_state['df_clean_preview'] = df_clean
                 
-                df_rekap_karyawan = df_clean[['Tanggal', 'Pegawai', 'Mesin', 'Shift_Final', 'Benang', 'Qty Cones', 'Qty Real Cones', 'Total']].copy()
+                df_rekap_karyawan = df_clean[['Tanggal', 'Pegawai', 'Mesin', 'Shift_Final', 'Benang', 'Qty Cones', 'Qty Real Cones', 'KG']].copy()
                 df_rekap_karyawan.columns = ['Tanggal', 'Nama Karyawan', 'Mesin', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
                 st.session_state['df_emp_preview'] = df_rekap_karyawan
 
-                df_rekap_mesin = df_clean[['Tanggal', 'Mesin', 'Pegawai', 'Shift_Final', 'Benang', 'Qty Cones', 'Qty Real Cones', 'Total']].copy()
+                df_rekap_mesin = df_clean[['Tanggal', 'Mesin', 'Pegawai', 'Shift_Final', 'Benang', 'Qty Cones', 'Qty Real Cones', 'KG']].copy()
                 df_rekap_mesin.columns = ['Tanggal', 'Mesin', 'Nama Karyawan', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
                 st.session_state['df_mach_preview'] = df_rekap_mesin
 
