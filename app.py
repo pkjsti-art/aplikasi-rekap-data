@@ -633,7 +633,7 @@ if proses_btn:
                 sheet_names = wb_src.sheetnames
 
                 # ==========================================
-                # TAHAP 4: SUMMARY REKAP PER MINGGU (PERBAIKAN)
+                # TAHAP 4: SUMMARY REKAP PER MINGGU (PERBAIKAN PRESISI)
                 # ==========================================
                 tahun_input = 2026
                 bulan_dict = {
@@ -675,13 +675,12 @@ if proses_btn:
                         if isinstance(val_raw, (int, float)):
                             f_val = float(val_raw)
                             if f_val <= 1.5:
-                                # MEMBULATKAN KE 2 DESIMAL AGAR PRESISI SESUAI TAMPILAN VISUAL EXCEL
-                                return round(f_val * 100.0, 2)
+                                return f_val * 100.0
                             else:
-                                return round(f_val, 2)
+                                return f_val
                         else:
                             p_str = str(val_raw).replace('%', '').replace(',', '.').strip()
-                            return round(float(p_str), 2)
+                            return float(p_str)
                     except:
                         return None
 
@@ -779,8 +778,6 @@ if proses_btn:
                     if col_persen_name is None:
                         col_persen_idx_1based = 12
 
-                    # --- LAKUKAN FFILL HANYA PADA DATAFRAME PROSES INTERNAL ---
-                    # (Tampilan visual Excel di ws_out tetap ter-merge)
                     df_group[tgl_col] = df_group[tgl_col].ffill()
                     df_group[mesin_col] = df_group[mesin_col].ffill()
                     if nama_col and nama_col in df_group.columns:
@@ -890,9 +887,9 @@ if proses_btn:
                                             try: valid_kg_list.append(float(str(k_val).replace(',', '.')))
                                             except: pass
 
-                                # --- AKURASI PERHITUNGAN HARIAN ---
                                 val_cones = sum(valid_cones_list) if valid_cones_list else 0.0
-                                val_persen = np.mean(valid_persen_list) if valid_persen_list else 0.0
+                                # MEMBULATKAN PERSENTASE HARIAN KE 2 DESIMAL PRESISI
+                                val_persen = round(np.mean(valid_persen_list), 2) if valid_persen_list else 0.0
                                 val_kg = sum(valid_kg_list) if valid_kg_list else 0.0
                                 
                                 row_data_store.append((val_cones, val_persen, val_kg))
@@ -901,7 +898,6 @@ if proses_btn:
                                 if val_persen > 0: daily_persen_for_avg.append(val_persen)
                                 if val_kg > 0: daily_kg_for_avg.append(val_kg)
 
-                            # --- PENULISAN DENGAN FORMAT EXCEL ---
                             for d_i, (val_cones, val_persen, val_kg) in enumerate(row_data_store):
                                 row_target_idx = 3 + d_i
                                 ws_out.cell(row=row_target_idx, column=col_offset, value=round(val_cones, 1) if val_cones > 0 else 0)
@@ -911,9 +907,9 @@ if proses_btn:
                                 
                                 ws_out.cell(row=row_target_idx, column=col_offset + 2, value="-" if val_kg == 0 else round(val_kg, 2))
 
-                            # --- PERHITUNGAN BARIS RATA-RATA MINGGUAN ---
                             avg_cones_val = np.mean(daily_cones_for_avg) if daily_cones_for_avg else 0.0
-                            avg_persen_val = np.mean(daily_persen_for_avg) if daily_persen_for_avg else 0.0
+                            # MEMBULATKAN RATA-RATA MINGGUAN KE 2 DESIMAL PRESISI
+                            avg_persen_val = round(np.mean(daily_persen_for_avg), 2) if daily_persen_for_avg else 0.0
                             avg_kg_val = np.mean(daily_kg_for_avg) if daily_kg_for_avg else 0.0
 
                             ws_out.cell(row=avg_row_idx, column=col_offset, value=round(avg_cones_val, 1)).font = bold_font
@@ -968,7 +964,7 @@ if proses_btn:
                                 if p_f is not None and p_f >= threshold_val:
                                     valid_p_vals.append(p_f)
 
-                            val_persen = np.mean(valid_p_vals) if valid_p_vals else 0.0
+                            val_persen = round(np.mean(valid_p_vals), 2) if valid_p_vals else 0.0
                             row_values_to_write.append(val_persen)
                             if val_persen > 0:
                                 day_percentages_for_avg.append(val_persen)
@@ -997,7 +993,7 @@ if proses_btn:
                     col_ptr = summary_start_col + 1
                     for mesin, w in combo_list:
                         p_list = col_data_dict[col_ptr]
-                        col_avg = np.mean(p_list) if p_list else 0.0
+                        col_avg = round(np.mean(p_list), 2) if p_list else 0.0
                         ac_cell = ws_out.cell(row=avg_row_summary, column=col_ptr, value="-" if col_avg == 0 else round(col_avg / 100.0, 4))
                         if col_avg > 0:
                             ac_cell.number_format = '0.00%'
@@ -1037,7 +1033,7 @@ if proses_btn:
                 df_rekap_mesin.columns = ['Tanggal', 'Mesin', 'Nama Karyawan', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
                 st.session_state['df_mach_preview'] = df_rekap_mesin
 
-                st.success("⚡ Pemrosesan Data Sukses! Perhitungan Hasil KG dan Total Cones telah diperbaiki.")
+                st.success("⚡ Pemrosesan Data Sukses! Presisi perhitungan persentase telah diselaraskan.")
 
             except Exception as e:
                 st.error(f"❌ Error Sistem: {e}")
