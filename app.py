@@ -633,7 +633,7 @@ if proses_btn:
                 sheet_names = wb_src.sheetnames
 
                 # ==========================================
-                # TAHAP 4: SUMMARY REKAP PER MINGGU (ROBUST FIX)
+                # TAHAP 4: SUMMARY REKAP PER MINGGU (THRESHOLD FILTER FIX)
                 # ==========================================
                 tahun_input = 2026
                 bulan_dict = {
@@ -885,30 +885,32 @@ if proses_btn:
                                         if not df_sub_group.empty:
                                             row_item = df_sub_group.iloc[0]
                                             p_f = parse_percentage_value(row_item.get(col_persen_name))
+                                            
+                                            # FILTER THRESHOLD: HANYA MASUKKAN JIKA >= THRESHOLD
                                             if p_f is not None and p_f >= threshold_val:
                                                 valid_persen_list.append(p_f)
 
-                                            c_sum = df_sub_group[col_cones_name].sum()
-                                            if pd.notna(c_sum):
-                                                try: valid_cones_list.append(float(c_sum))
-                                                except: pass
-                                            
-                                            k_sum = df_sub_group[col_kg_name].apply(lambda x: float(str(x).replace(',', '.')) if pd.notna(x) else 0.0).sum()
-                                            if pd.notna(k_sum):
-                                                valid_kg_list.append(float(k_sum))
+                                                c_sum = df_sub_group[col_cones_name].sum()
+                                                if pd.notna(c_sum):
+                                                    try: valid_cones_list.append(float(c_sum))
+                                                    except: pass
+                                                
+                                                k_sum = df_sub_group[col_kg_name].apply(lambda x: float(str(x).replace(',', '.')) if pd.notna(x) else 0.0).sum()
+                                                if pd.notna(k_sum):
+                                                    valid_kg_list.append(float(k_sum))
                                 else:
                                     for _, row_item in df_day.iterrows():
                                         p_f = parse_percentage_value(row_item.get(col_persen_name))
                                         if p_f is not None and p_f >= threshold_val:
                                             valid_persen_list.append(p_f)
-                                        c_val = row_item.get(col_cones_name, 0.0)
-                                        if pd.notna(c_val):
-                                            try: valid_cones_list.append(float(c_val))
-                                            except: pass
-                                        k_val = row_item.get(col_kg_name, 0.0)
-                                        if pd.notna(k_val):
-                                            try: valid_kg_list.append(float(str(k_val).replace(',', '.')))
-                                            except: pass
+                                            c_val = row_item.get(col_cones_name, 0.0)
+                                            if pd.notna(c_val):
+                                                try: valid_cones_list.append(float(c_val))
+                                                except: pass
+                                            k_val = row_item.get(col_kg_name, 0.0)
+                                            if pd.notna(k_val):
+                                                try: valid_kg_list.append(float(str(k_val).replace(',', '.')))
+                                                except: pass
 
                                 val_cones = sum(valid_cones_list) if valid_cones_list else 0.0
                                 val_persen = round(np.mean(valid_persen_list), 2) if valid_persen_list else 0.0
@@ -1068,7 +1070,7 @@ if proses_btn:
                 df_rekap_mesin.columns = ['Tanggal', 'Mesin', 'Nama Karyawan', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
                 st.session_state['df_mach_preview'] = df_rekap_mesin
 
-                st.success("⚡ Pemrosesan Data Sukses! Data Summary Mingguan kini tampil normal.")
+                st.success("⚡ Pemrosesan Data Sukses! Nilai di bawah threshold kini otomatis diabaikan pada Total Cones dan Hasil KG.")
 
             except Exception as e:
                 st.error(f"❌ Error Sistem: {e}")
