@@ -633,7 +633,7 @@ if proses_btn:
                 sheet_names = wb_src.sheetnames
 
                 # ==========================================
-                # TAHAP 4: SUMMARY REKAP PER MINGGU (PERBAIKAN PRESISI)
+                # TAHAP 4: SUMMARY REKAP PER MINGGU (AGREGASI UNIK PER KELOMPOK)
                 # ==========================================
                 tahun_input = 2026
                 bulan_dict = {
@@ -874,21 +874,31 @@ if proses_btn:
                                 df_day = df_minggu[df_minggu['Nama_Hari'] == day_name]
                                 valid_cones_list, valid_persen_list, valid_kg_list = [], [], []
 
-                                for _, row_item in df_day.iterrows():
-                                    p_f = parse_percentage_value(row_item.get(col_persen_name))
-                                    if p_f is not None and p_f >= threshold_val:
-                                        c_val = row_item.get(col_cones_name, 0.0)
-                                        if pd.notna(c_val):
-                                            try: valid_cones_list.append(float(c_val))
-                                            except: pass
-                                        valid_persen_list.append(p_f)
-                                        k_val = row_item.get(col_kg_name, 0.0)
-                                        if pd.notna(k_val):
-                                            try: valid_kg_list.append(float(str(k_val).replace(',', '.')))
-                                            except: pass
+                                # --- AGREGASI BERDASARKAN KELOMPOK UNIK (TANGGAL + PEGAWAI + MESIN) ---
+                                if not df_day.empty and 'Pegawai' in df_day.columns and tgl_col in df_day.columns:
+                                    group_keys_day = df_day[[tgl_col, 'Pegawai', mesin_col]].drop_duplicates().values
+                                    for dt_val, peg_val, m_val in group_keys_day:
+                                        df_sub_group = df_day[
+                                            (df_day[tgl_col] == dt_val) & 
+                                            (df_day['Pegawai'] == peg_val) & 
+                                            (df_day[mesin_col] == m_val)
+                                        ]
+                                        if not df_sub_group.empty:
+                                            row_item = df_sub_group.iloc[0]
+                                            p_f = parse_percentage_value(row_item.get(col_persen_name))
+                                            if p_f is not None and p_f >= threshold_val:
+                                                valid_persen_list.append(p_f)
+
+                                            c_sum = df_sub_group[col_cones_name].sum()
+                                            if pd.notna(c_sum):
+                                                try: valid_cones_list.append(float(c_sum))
+                                                except: pass
+                                            
+                                            k_sum = df_sub_group[col_kg_name].apply(lambda x: float(str(x).replace(',', '.')) if pd.notna(x) else 0.0).sum()
+                                            if pd.notna(k_sum):
+                                                valid_kg_list.append(float(k_sum))
 
                                 val_cones = sum(valid_cones_list) if valid_cones_list else 0.0
-                                # MEMBULATKAN PERSENTASE HARIAN KE 2 DESIMAL PRESISI
                                 val_persen = round(np.mean(valid_persen_list), 2) if valid_persen_list else 0.0
                                 val_kg = sum(valid_kg_list) if valid_kg_list else 0.0
                                 
@@ -908,7 +918,6 @@ if proses_btn:
                                 ws_out.cell(row=row_target_idx, column=col_offset + 2, value="-" if val_kg == 0 else round(val_kg, 2))
 
                             avg_cones_val = np.mean(daily_cones_for_avg) if daily_cones_for_avg else 0.0
-                            # MEMBULATKAN RATA-RATA MINGGUAN KE 2 DESIMAL PRESISI
                             avg_persen_val = round(np.mean(daily_persen_for_avg), 2) if daily_persen_for_avg else 0.0
                             avg_kg_val = np.mean(daily_kg_for_avg) if daily_kg_for_avg else 0.0
 
@@ -959,10 +968,19 @@ if proses_btn:
                             df_day = df_minggu_item[df_minggu_item['Nama_Hari'] == day_name]
                             valid_p_vals = []
                             
-                            for _, row_item in df_day.iterrows():
-                                p_f = parse_percentage_value(row_item.get(col_persen_name))
-                                if p_f is not None and p_f >= threshold_val:
-                                    valid_p_vals.append(p_f)
+                            if not df_day.empty and 'Pegawai' in df_day.columns and tgl_col in df_day.columns:
+                                group_keys_day = df_day[[tgl_col, 'Pegawai', mesin_col]].drop_duplicates().values
+                                for dt_val, peg_val, m_val in group_keys_day:
+                                    df_sub_group = df_day[
+                                        (df_day[tgl_col] == dt_val) & 
+                                        (df_day['Pegawai'] == peg_val) & 
+                                        (df_day[mesin_col] == m_val)
+                                    ]
+                                    if not df_sub_group.empty:
+                                        row_item = df_sub_group.iloc[0]
+                                        p_f = parse_percentage_value(row_item.get(col_persen_name))
+                                        if p_f is not None and p_f >= threshold_val:
+                                            valid_p_vals.append(p_f)
 
                             val_persen = round(np.mean(valid_p_vals), 2) if valid_p_vals else 0.0
                             row_values_to_write.append(val_persen)
@@ -1033,7 +1051,7 @@ if proses_btn:
                 df_rekap_mesin.columns = ['Tanggal', 'Mesin', 'Nama Karyawan', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
                 st.session_state['df_mach_preview'] = df_rekap_mesin
 
-                st.success("⚡ Pemrosesan Data Sukses! Presisi perhitungan persentase telah diselaraskan.")
+                st.success("⚡ Pemrosesan Data Sukses! Presisi perhitungan persentase harian telah diselaraskan.")
 
             except Exception as e:
                 st.error(f"❌ Error Sistem: {e}")
