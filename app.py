@@ -675,12 +675,13 @@ if proses_btn:
                         if isinstance(val_raw, (int, float)):
                             f_val = float(val_raw)
                             if f_val <= 1.5:
-                                return f_val * 100.0
+                                # MEMBULATKAN KE 2 DESIMAL AGAR PRESISI SESUAI TAMPILAN VISUAL EXCEL
+                                return round(f_val * 100.0, 2)
                             else:
-                                return f_val
+                                return round(f_val, 2)
                         else:
                             p_str = str(val_raw).replace('%', '').replace(',', '.').strip()
-                            return float(p_str)
+                            return round(float(p_str), 2)
                     except:
                         return None
 
