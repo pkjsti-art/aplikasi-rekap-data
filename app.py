@@ -633,7 +633,7 @@ if proses_btn:
                 sheet_names = wb_src.sheetnames
 
                 # ==========================================
-                # TAHAP 4: SUMMARY REKAP PER MINGGU (AGREGASI UNIK PER KELOMPOK)
+                # TAHAP 4: SUMMARY REKAP PER MINGGU (ROBUST FIX)
                 # ==========================================
                 tahun_input = 2026
                 bulan_dict = {
@@ -763,8 +763,8 @@ if proses_btn:
 
                     df_group = pd.concat(all_combined_dfs, ignore_index=True)
                     tgl_col = 'TANGGAL' if 'TANGGAL' in df_group.columns else ('Tanggal' if 'Tanggal' in df_group.columns else df_group.columns[0])
-                    mesin_col = 'MESIN' if 'MESIN' in df_group.columns else ('Mesin' if 'Mesin' in df_group.columns else df_group.columns[1])
-                    nama_col = 'NAMA' if 'NAMA' in df_group.columns else ('Nama' if 'Nama' in df_group.columns else (df_group.columns[2] if len(df_group.columns) > 2 else None))
+                    mesin_col = 'MESIN' if 'MESIN' in df_group.columns else ('Mesin' if 'Mesin' in df_group.columns else df_group.columns[2])
+                    nama_col = 'NAMA' if 'NAMA' in df_group.columns else ('Nama' if 'Nama' in df_group.columns else (df_group.columns[1] if len(df_group.columns) > 1 else None))
 
                     col_persen_name, col_persen_idx_1based = None, None
                     for idx, col_name in enumerate(df_group.columns):
@@ -874,13 +874,12 @@ if proses_btn:
                                 df_day = df_minggu[df_minggu['Nama_Hari'] == day_name]
                                 valid_cones_list, valid_persen_list, valid_kg_list = [], [], []
 
-                                # --- AGREGASI BERDASARKAN KELOMPOK UNIK (TANGGAL + PEGAWAI + MESIN) ---
-                                if not df_day.empty and 'Pegawai' in df_day.columns and tgl_col in df_day.columns:
-                                    group_keys_day = df_day[[tgl_col, 'Pegawai', mesin_col]].drop_duplicates().values
+                                if not df_day.empty and nama_col and nama_col in df_day.columns:
+                                    group_keys_day = df_day[[tgl_col, nama_col, mesin_col]].drop_duplicates().values
                                     for dt_val, peg_val, m_val in group_keys_day:
                                         df_sub_group = df_day[
                                             (df_day[tgl_col] == dt_val) & 
-                                            (df_day['Pegawai'] == peg_val) & 
+                                            (df_day[nama_col] == peg_val) & 
                                             (df_day[mesin_col] == m_val)
                                         ]
                                         if not df_sub_group.empty:
@@ -897,6 +896,19 @@ if proses_btn:
                                             k_sum = df_sub_group[col_kg_name].apply(lambda x: float(str(x).replace(',', '.')) if pd.notna(x) else 0.0).sum()
                                             if pd.notna(k_sum):
                                                 valid_kg_list.append(float(k_sum))
+                                else:
+                                    for _, row_item in df_day.iterrows():
+                                        p_f = parse_percentage_value(row_item.get(col_persen_name))
+                                        if p_f is not None and p_f >= threshold_val:
+                                            valid_persen_list.append(p_f)
+                                        c_val = row_item.get(col_cones_name, 0.0)
+                                        if pd.notna(c_val):
+                                            try: valid_cones_list.append(float(c_val))
+                                            except: pass
+                                        k_val = row_item.get(col_kg_name, 0.0)
+                                        if pd.notna(k_val):
+                                            try: valid_kg_list.append(float(str(k_val).replace(',', '.')))
+                                            except: pass
 
                                 val_cones = sum(valid_cones_list) if valid_cones_list else 0.0
                                 val_persen = round(np.mean(valid_persen_list), 2) if valid_persen_list else 0.0
@@ -968,12 +980,12 @@ if proses_btn:
                             df_day = df_minggu_item[df_minggu_item['Nama_Hari'] == day_name]
                             valid_p_vals = []
                             
-                            if not df_day.empty and 'Pegawai' in df_day.columns and tgl_col in df_day.columns:
-                                group_keys_day = df_day[[tgl_col, 'Pegawai', mesin_col]].drop_duplicates().values
+                            if not df_day.empty and nama_col and nama_col in df_day.columns:
+                                group_keys_day = df_day[[tgl_col, nama_col, mesin_col]].drop_duplicates().values
                                 for dt_val, peg_val, m_val in group_keys_day:
                                     df_sub_group = df_day[
                                         (df_day[tgl_col] == dt_val) & 
-                                        (df_day['Pegawai'] == peg_val) & 
+                                        (df_day[nama_col] == peg_val) & 
                                         (df_day[mesin_col] == m_val)
                                     ]
                                     if not df_sub_group.empty:
@@ -981,6 +993,11 @@ if proses_btn:
                                         p_f = parse_percentage_value(row_item.get(col_persen_name))
                                         if p_f is not None and p_f >= threshold_val:
                                             valid_p_vals.append(p_f)
+                            else:
+                                for _, row_item in df_day.iterrows():
+                                    p_f = parse_percentage_value(row_item.get(col_persen_name))
+                                    if p_f is not None and p_f >= threshold_val:
+                                        valid_p_vals.append(p_f)
 
                             val_persen = round(np.mean(valid_p_vals), 2) if valid_p_vals else 0.0
                             row_values_to_write.append(val_persen)
@@ -1051,7 +1068,7 @@ if proses_btn:
                 df_rekap_mesin.columns = ['Tanggal', 'Mesin', 'Nama Karyawan', 'Shift', 'Jenis Benang', 'Jumlah Cones', 'Qty Real Cones', 'Total KG']
                 st.session_state['df_mach_preview'] = df_rekap_mesin
 
-                st.success("⚡ Pemrosesan Data Sukses! Presisi perhitungan persentase harian telah diselaraskan.")
+                st.success("⚡ Pemrosesan Data Sukses! Data Summary Mingguan kini tampil normal.")
 
             except Exception as e:
                 st.error(f"❌ Error Sistem: {e}")
