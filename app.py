@@ -276,7 +276,7 @@ def generate_excel_report(df_gabungan, df_indikator):
                 sheet_name_raw = nama_bj 
                 merk_display = group_data['Merk_Group'].iloc[0] if not group_data.empty else nama_bj
             else:
-                # PERBAIKAN LOGIKA PEMOTONGAN SESUAI TANDA "." 
+                # PERBAIKAN LOGIKA PEMOTONGAN SESUAI TANDA "." (TITIK)
                 if "." in nama_bj:
                     penggalan = nama_bj.split(".", 1)[1].strip()
                 else:
@@ -285,6 +285,7 @@ def generate_excel_report(df_gabungan, df_indikator):
                 sheet_name_raw = penggalan
                 merk_display = penggalan
                 
+            # MENGUBAH KARAKTER ILEGAL MENJADI STRIP "-"
             sheet_name_clean = re.sub(r'[\\/*?:\[\]]', '-', sheet_name_raw)[:31]
             base_sheet_name = sheet_name_clean
             counter = 1
